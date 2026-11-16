@@ -1,5 +1,5 @@
-@font-face{font-family:King,system-ui,sans-serif;src:url(/fonts/king.otf)}
-@font-face{font-family:DM,system-ui,sans-serif;src:url(/fonts/body.ttf);font-weight:100 1000}
+@font-face{font-family:King;src:url(/fonts/king.otf);font-display:swap}
+@font-face{font-family:DM;src:url(/fonts/body.ttf);font-weight:100 1000;font-display:swap}
 .desk{--blue:#0058cc;--pink:#b74587;--ink:#232b35;--mute:#40516a;--bg:#f1f4f8;--line:#dce3ed;min-height:100vh;background:var(--bg);color:var(--ink);font:18px/1.5 DM,system-ui,sans-serif}
 .desk *{box-sizing:border-box}
 .desk h1,.desk h2,.desk h3,.desk p{margin:0}
