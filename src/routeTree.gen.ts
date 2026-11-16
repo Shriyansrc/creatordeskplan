@@ -31,6 +31,7 @@ import { Route as ApiAiReferenceRouteImport } from './routes/api/ai/reference'
 import { Route as ApiAiReferencesRouteImport } from './routes/api/ai/references'
 import { Route as ApiAiResearchRouteImport } from './routes/api/ai/research'
 import { Route as ApiAiScriptRouteImport } from './routes/api/ai/script'
+import { Route as ApiAiSpeechRouteImport } from './routes/api/ai/speech'
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai/status'
 import { Route as ApiAiStyleRouteImport } from './routes/api/ai/style'
 import { Route as ApiAiTopicsRouteImport } from './routes/api/ai/topics'
@@ -147,6 +148,11 @@ const ApiAiScriptRoute = ApiAiScriptRouteImport.update({
   path: '/api/ai/script',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiSpeechRoute = ApiAiSpeechRouteImport.update({
+  id: '/api/ai/speech',
+  path: '/api/ai/speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
   id: '/api/ai/status',
   path: '/api/ai/status',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
+  '/api/ai/speech': typeof ApiAiSpeechRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/ai/style': typeof ApiAiStyleRoute
   '/api/ai/topics': typeof ApiAiTopicsRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
+  '/api/ai/speech': typeof ApiAiSpeechRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/ai/style': typeof ApiAiStyleRoute
   '/api/ai/topics': typeof ApiAiTopicsRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
+  '/api/ai/speech': typeof ApiAiSpeechRoute
   '/api/ai/status': typeof ApiAiStatusRoute
   '/api/ai/style': typeof ApiAiStyleRoute
   '/api/ai/topics': typeof ApiAiTopicsRoute
@@ -285,6 +294,7 @@ export interface FileRouteTypes {
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
+    | '/api/ai/speech'
     | '/api/ai/status'
     | '/api/ai/style'
     | '/api/ai/topics'
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
+    | '/api/ai/speech'
     | '/api/ai/status'
     | '/api/ai/style'
     | '/api/ai/topics'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
+    | '/api/ai/speech'
     | '/api/ai/status'
     | '/api/ai/style'
     | '/api/ai/topics'
@@ -364,6 +376,7 @@ export interface RootRouteChildren {
   ApiAiReferencesRoute: typeof ApiAiReferencesRoute
   ApiAiResearchRoute: typeof ApiAiResearchRoute
   ApiAiScriptRoute: typeof ApiAiScriptRoute
+  ApiAiSpeechRoute: typeof ApiAiSpeechRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiAiStyleRoute: typeof ApiAiStyleRoute
   ApiAiTopicsRoute: typeof ApiAiTopicsRoute
@@ -527,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiScriptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/speech': {
+      id: '/api/ai/speech'
+      path: '/api/ai/speech'
+      fullPath: '/api/ai/speech'
+      preLoaderRoute: typeof ApiAiSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ai/status': {
       id: '/api/ai/status'
       path: '/api/ai/status'
@@ -604,6 +624,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiReferencesRoute: ApiAiReferencesRoute,
   ApiAiResearchRoute: ApiAiResearchRoute,
   ApiAiScriptRoute: ApiAiScriptRoute,
+  ApiAiSpeechRoute: ApiAiSpeechRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiAiStyleRoute: ApiAiStyleRoute,
   ApiAiTopicsRoute: ApiAiTopicsRoute,
