@@ -37,7 +37,7 @@ export function SetupFrame({ step, children, foot }: { step: number; children: R
       <header className="dk-top">
         <Brand />
         <Steps step={step} />
-        <span className="dk-aside">Step {step} of 5</span>
+        <span className="dk-aside dk-stepn">Step {step} of 5</span>
       </header>
       <main className="dk-main">{children}</main>
       <footer className="dk-foot">{foot}</footer>

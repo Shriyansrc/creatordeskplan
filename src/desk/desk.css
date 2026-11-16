@@ -104,3 +104,6 @@ textarea.dk-field{resize:vertical;min-height:110px}
 .dk-item h3{margin:0 0 4px;font-size:17px}
 .dk-item p{margin:0;font-size:15px}
 @media(max-width:640px){.dk-cal{gap:4px}.dk-cal button{min-height:56px;padding:5px;font-size:12px}.dk-cal button span{display:none}}
+.dk-top a,.dk-top .dk-brand{white-space:nowrap}
+@media(max-width:640px){.dk-stepn{display:none}.dk-top{gap:12px}}
+@media(max-width:700px){.dk-g2{grid-template-columns:minmax(0,1fr)!important}}
