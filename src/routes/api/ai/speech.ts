@@ -17,7 +17,7 @@ export const Route = createFileRoute("/api/ai/speech")({
         }
         try {
           const prompt = input.style ? `Say this ${input.style}: ${input.text}` : input.text;
-          const audio = await generateSpeech({ model: "google/gemini-2.5-flash-tts", contents: [{ role: "user", parts: [{ text: prompt }] }] } as never);
+          const audio = await generateSpeech({ model: "google/gemini-2.5-flash-tts", contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } } } as never);
           return audio.toResponse();
         } catch (error) {
           return Response.json({ error: error instanceof Error ? error.message.slice(0, 300) : "Speech failed" }, { status: 502 });
