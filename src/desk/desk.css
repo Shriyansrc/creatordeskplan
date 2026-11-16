@@ -93,3 +93,14 @@ textarea.dk-field{resize:vertical;min-height:110px}
 .dk-mobnav{display:none;position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);z-index:7;padding:6px}
 .dk-mobnav a{flex:1;text-align:center;font-size:13px;padding:10px 2px;color:var(--mute);text-decoration:none}
 .dk-mobnav a.on{color:var(--blue);font-weight:700}
+.dk-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px}
+.dk-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.dk-cal button{min-height:74px;text-align:left;padding:8px;border-radius:14px;border:1px solid #d3dbe6;background:#f4f7fb;color:var(--ink);font:inherit;font-size:12px;cursor:pointer;overflow:hidden}
+.dk-cal button b{display:block;font-size:12px;color:#4a5668;margin-bottom:2px}
+.dk-cal button.sel{border-color:var(--blue);background:#e3ecfb}
+.dk-cal .hd{font-size:12px;color:#4a5668;text-align:center;padding:2px}
+.dk-list{display:grid;gap:10px}
+.dk-item{background:#eef2f8;border-radius:16px;padding:14px 16px}
+.dk-item h3{margin:0 0 4px;font-size:17px}
+.dk-item p{margin:0;font-size:15px}
+@media(max-width:640px){.dk-cal{gap:4px}.dk-cal button{min-height:56px;padding:5px;font-size:12px}.dk-cal button span{display:none}}
