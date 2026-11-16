@@ -4,6 +4,8 @@ import { Spinner } from "@/desk/ui";
 import { patchDesk, useDesk } from "@/desk/store";
 import { errorText, runPlan, runResearch, runScript } from "@/desk/api";
 import type { Platform, PlanTopic } from "@/lib/ai/contracts";
+import { ReferencePanel } from "@/components/creator/reference-panel";
+import type { StudioShared } from "@/lib/creator-shared";
 
 export const Route = createFileRoute("/desk/plan")({ component: Plan });
 
@@ -156,6 +158,9 @@ function Plan() {
                 <Link to="/desk/create" className="dk-btn">Next: record or create</Link>
               </div>
             )}
+            <h2 style={{ margin: "28px 0 6px" }}>Reference videos</h2>
+            <p style={{ marginBottom: 12 }}>Search real videos on this idea or paste an Instagram or X link with the numbers you see. Nothing is fetched from those links.</p>
+            <ReferencePanel st={{ topic: topic.title, goal: p.goal, niche: 99, day: topic.day } as unknown as StudioShared} pains={p.painPoints.map((x) => [x])} />
           </>
         )
       )}
