@@ -10,20 +10,83 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DeskRouteImport } from './routes/desk'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as DeskIndexRouteImport } from './routes/desk.index'
+import { Route as DeskCreateRouteImport } from './routes/desk.create'
+import { Route as DeskEditorRouteImport } from './routes/desk.editor'
+import { Route as DeskNicheRouteImport } from './routes/desk.niche'
+import { Route as DeskPlanRouteImport } from './routes/desk.plan'
+import { Route as DeskSettingsRouteImport } from './routes/desk.settings'
+import { Route as DeskShareRouteImport } from './routes/desk.share'
+import { Route as ApiAiAudienceRouteImport } from './routes/api/ai/audience'
 import { Route as ApiAiCaptionsRouteImport } from './routes/api/ai/captions'
 import { Route as ApiAiEditRouteImport } from './routes/api/ai/edit'
+import { Route as ApiAiGoalRouteImport } from './routes/api/ai/goal'
+import { Route as ApiAiNichesRouteImport } from './routes/api/ai/niches'
 import { Route as ApiAiPlanRouteImport } from './routes/api/ai/plan'
 import { Route as ApiAiPlatformsRouteImport } from './routes/api/ai/platforms'
 import { Route as ApiAiReferencesRouteImport } from './routes/api/ai/references'
 import { Route as ApiAiResearchRouteImport } from './routes/api/ai/research'
 import { Route as ApiAiScriptRouteImport } from './routes/api/ai/script'
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai/status'
+import { Route as ApiAiTopicsRouteImport } from './routes/api/ai/topics'
 import { Route as ApiAiVideoRouteImport } from './routes/api/ai/video'
 import { Route as ApiAiVoiceRouteImport } from './routes/api/ai/voice'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeskRoute = DeskRouteImport.update({
+  id: '/desk',
+  path: '/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeskIndexRoute = DeskIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DeskRoute,
+} as any)
+const DeskCreateRoute = DeskCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => DeskRoute,
+} as any)
+const DeskEditorRoute = DeskEditorRouteImport.update({
+  id: '/editor',
+  path: '/editor',
+  getParentRoute: () => DeskRoute,
+} as any)
+const DeskNicheRoute = DeskNicheRouteImport.update({
+  id: '/niche',
+  path: '/niche',
+  getParentRoute: () => DeskRoute,
+} as any)
+const DeskPlanRoute = DeskPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => DeskRoute,
+} as any)
+const DeskSettingsRoute = DeskSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DeskRoute,
+} as any)
+const DeskShareRoute = DeskShareRouteImport.update({
+  id: '/share',
+  path: '/share',
+  getParentRoute: () => DeskRoute,
+} as any)
+const ApiAiAudienceRoute = ApiAiAudienceRouteImport.update({
+  id: '/api/ai/audience',
+  path: '/api/ai/audience',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiCaptionsRoute = ApiAiCaptionsRouteImport.update({
@@ -34,6 +97,16 @@ const ApiAiCaptionsRoute = ApiAiCaptionsRouteImport.update({
 const ApiAiEditRoute = ApiAiEditRouteImport.update({
   id: '/api/ai/edit',
   path: '/api/ai/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiGoalRoute = ApiAiGoalRouteImport.update({
+  id: '/api/ai/goal',
+  path: '/api/ai/goal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiNichesRoute = ApiAiNichesRouteImport.update({
+  id: '/api/ai/niches',
+  path: '/api/ai/niches',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiPlanRoute = ApiAiPlanRouteImport.update({
@@ -66,6 +139,11 @@ const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
   path: '/api/ai/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiTopicsRoute = ApiAiTopicsRouteImport.update({
+  id: '/api/ai/topics',
+  path: '/api/ai/topics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAiVideoRoute = ApiAiVideoRouteImport.update({
   id: '/api/ai/video',
   path: '/api/ai/video',
@@ -79,41 +157,79 @@ const ApiAiVoiceRoute = ApiAiVoiceRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/desk': typeof DeskRouteWithChildren
+  '/setup': typeof SetupRoute
+  '/desk/create': typeof DeskCreateRoute
+  '/desk/editor': typeof DeskEditorRoute
+  '/desk/niche': typeof DeskNicheRoute
+  '/desk/plan': typeof DeskPlanRoute
+  '/desk/settings': typeof DeskSettingsRoute
+  '/desk/share': typeof DeskShareRoute
+  '/desk/': typeof DeskIndexRoute
+  '/api/ai/audience': typeof ApiAiAudienceRoute
   '/api/ai/captions': typeof ApiAiCaptionsRoute
   '/api/ai/edit': typeof ApiAiEditRoute
+  '/api/ai/goal': typeof ApiAiGoalRoute
+  '/api/ai/niches': typeof ApiAiNichesRoute
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
   '/api/ai/status': typeof ApiAiStatusRoute
+  '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/setup': typeof SetupRoute
+  '/desk/create': typeof DeskCreateRoute
+  '/desk/editor': typeof DeskEditorRoute
+  '/desk/niche': typeof DeskNicheRoute
+  '/desk/plan': typeof DeskPlanRoute
+  '/desk/settings': typeof DeskSettingsRoute
+  '/desk/share': typeof DeskShareRoute
+  '/desk': typeof DeskIndexRoute
+  '/api/ai/audience': typeof ApiAiAudienceRoute
   '/api/ai/captions': typeof ApiAiCaptionsRoute
   '/api/ai/edit': typeof ApiAiEditRoute
+  '/api/ai/goal': typeof ApiAiGoalRoute
+  '/api/ai/niches': typeof ApiAiNichesRoute
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
   '/api/ai/status': typeof ApiAiStatusRoute
+  '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/desk': typeof DeskRouteWithChildren
+  '/setup': typeof SetupRoute
+  '/desk/create': typeof DeskCreateRoute
+  '/desk/editor': typeof DeskEditorRoute
+  '/desk/niche': typeof DeskNicheRoute
+  '/desk/plan': typeof DeskPlanRoute
+  '/desk/settings': typeof DeskSettingsRoute
+  '/desk/share': typeof DeskShareRoute
+  '/desk/': typeof DeskIndexRoute
+  '/api/ai/audience': typeof ApiAiAudienceRoute
   '/api/ai/captions': typeof ApiAiCaptionsRoute
   '/api/ai/edit': typeof ApiAiEditRoute
+  '/api/ai/goal': typeof ApiAiGoalRoute
+  '/api/ai/niches': typeof ApiAiNichesRoute
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
   '/api/ai/status': typeof ApiAiStatusRoute
+  '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
 }
@@ -121,54 +237,98 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/desk'
+    | '/setup'
+    | '/desk/create'
+    | '/desk/editor'
+    | '/desk/niche'
+    | '/desk/plan'
+    | '/desk/settings'
+    | '/desk/share'
+    | '/desk/'
+    | '/api/ai/audience'
     | '/api/ai/captions'
     | '/api/ai/edit'
+    | '/api/ai/goal'
+    | '/api/ai/niches'
     | '/api/ai/plan'
     | '/api/ai/platforms'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
     | '/api/ai/status'
+    | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/setup'
+    | '/desk/create'
+    | '/desk/editor'
+    | '/desk/niche'
+    | '/desk/plan'
+    | '/desk/settings'
+    | '/desk/share'
+    | '/desk'
+    | '/api/ai/audience'
     | '/api/ai/captions'
     | '/api/ai/edit'
+    | '/api/ai/goal'
+    | '/api/ai/niches'
     | '/api/ai/plan'
     | '/api/ai/platforms'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
     | '/api/ai/status'
+    | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
   id:
     | '__root__'
     | '/'
+    | '/desk'
+    | '/setup'
+    | '/desk/create'
+    | '/desk/editor'
+    | '/desk/niche'
+    | '/desk/plan'
+    | '/desk/settings'
+    | '/desk/share'
+    | '/desk/'
+    | '/api/ai/audience'
     | '/api/ai/captions'
     | '/api/ai/edit'
+    | '/api/ai/goal'
+    | '/api/ai/niches'
     | '/api/ai/plan'
     | '/api/ai/platforms'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
     | '/api/ai/status'
+    | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DeskRoute: typeof DeskRouteWithChildren
+  SetupRoute: typeof SetupRoute
+  ApiAiAudienceRoute: typeof ApiAiAudienceRoute
   ApiAiCaptionsRoute: typeof ApiAiCaptionsRoute
   ApiAiEditRoute: typeof ApiAiEditRoute
+  ApiAiGoalRoute: typeof ApiAiGoalRoute
+  ApiAiNichesRoute: typeof ApiAiNichesRoute
   ApiAiPlanRoute: typeof ApiAiPlanRoute
   ApiAiPlatformsRoute: typeof ApiAiPlatformsRoute
   ApiAiReferencesRoute: typeof ApiAiReferencesRoute
   ApiAiResearchRoute: typeof ApiAiResearchRoute
   ApiAiScriptRoute: typeof ApiAiScriptRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
+  ApiAiTopicsRoute: typeof ApiAiTopicsRoute
   ApiAiVideoRoute: typeof ApiAiVideoRoute
   ApiAiVoiceRoute: typeof ApiAiVoiceRoute
 }
@@ -180,6 +340,76 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desk': {
+      id: '/desk'
+      path: '/desk'
+      fullPath: '/desk'
+      preLoaderRoute: typeof DeskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desk/': {
+      id: '/desk/'
+      path: '/'
+      fullPath: '/desk/'
+      preLoaderRoute: typeof DeskIndexRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/desk/create': {
+      id: '/desk/create'
+      path: '/create'
+      fullPath: '/desk/create'
+      preLoaderRoute: typeof DeskCreateRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/desk/editor': {
+      id: '/desk/editor'
+      path: '/editor'
+      fullPath: '/desk/editor'
+      preLoaderRoute: typeof DeskEditorRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/desk/niche': {
+      id: '/desk/niche'
+      path: '/niche'
+      fullPath: '/desk/niche'
+      preLoaderRoute: typeof DeskNicheRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/desk/plan': {
+      id: '/desk/plan'
+      path: '/plan'
+      fullPath: '/desk/plan'
+      preLoaderRoute: typeof DeskPlanRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/desk/settings': {
+      id: '/desk/settings'
+      path: '/settings'
+      fullPath: '/desk/settings'
+      preLoaderRoute: typeof DeskSettingsRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/desk/share': {
+      id: '/desk/share'
+      path: '/share'
+      fullPath: '/desk/share'
+      preLoaderRoute: typeof DeskShareRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/api/ai/audience': {
+      id: '/api/ai/audience'
+      path: '/api/ai/audience'
+      fullPath: '/api/ai/audience'
+      preLoaderRoute: typeof ApiAiAudienceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai/captions': {
@@ -194,6 +424,20 @@ declare module '@tanstack/react-router' {
       path: '/api/ai/edit'
       fullPath: '/api/ai/edit'
       preLoaderRoute: typeof ApiAiEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/goal': {
+      id: '/api/ai/goal'
+      path: '/api/ai/goal'
+      fullPath: '/api/ai/goal'
+      preLoaderRoute: typeof ApiAiGoalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/niches': {
+      id: '/api/ai/niches'
+      path: '/api/ai/niches'
+      fullPath: '/api/ai/niches'
+      preLoaderRoute: typeof ApiAiNichesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai/plan': {
@@ -238,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/topics': {
+      id: '/api/ai/topics'
+      path: '/api/ai/topics'
+      fullPath: '/api/ai/topics'
+      preLoaderRoute: typeof ApiAiTopicsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ai/video': {
       id: '/api/ai/video'
       path: '/api/ai/video'
@@ -255,16 +506,44 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DeskRouteChildren {
+  DeskCreateRoute: typeof DeskCreateRoute
+  DeskEditorRoute: typeof DeskEditorRoute
+  DeskNicheRoute: typeof DeskNicheRoute
+  DeskPlanRoute: typeof DeskPlanRoute
+  DeskSettingsRoute: typeof DeskSettingsRoute
+  DeskShareRoute: typeof DeskShareRoute
+  DeskIndexRoute: typeof DeskIndexRoute
+}
+
+const DeskRouteChildren: DeskRouteChildren = {
+  DeskCreateRoute: DeskCreateRoute,
+  DeskEditorRoute: DeskEditorRoute,
+  DeskNicheRoute: DeskNicheRoute,
+  DeskPlanRoute: DeskPlanRoute,
+  DeskSettingsRoute: DeskSettingsRoute,
+  DeskShareRoute: DeskShareRoute,
+  DeskIndexRoute: DeskIndexRoute,
+}
+
+const DeskRouteWithChildren = DeskRoute._addFileChildren(DeskRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DeskRoute: DeskRouteWithChildren,
+  SetupRoute: SetupRoute,
+  ApiAiAudienceRoute: ApiAiAudienceRoute,
   ApiAiCaptionsRoute: ApiAiCaptionsRoute,
   ApiAiEditRoute: ApiAiEditRoute,
+  ApiAiGoalRoute: ApiAiGoalRoute,
+  ApiAiNichesRoute: ApiAiNichesRoute,
   ApiAiPlanRoute: ApiAiPlanRoute,
   ApiAiPlatformsRoute: ApiAiPlatformsRoute,
   ApiAiReferencesRoute: ApiAiReferencesRoute,
   ApiAiResearchRoute: ApiAiResearchRoute,
   ApiAiScriptRoute: ApiAiScriptRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
+  ApiAiTopicsRoute: ApiAiTopicsRoute,
   ApiAiVideoRoute: ApiAiVideoRoute,
   ApiAiVoiceRoute: ApiAiVoiceRoute,
 }
