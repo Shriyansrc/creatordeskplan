@@ -24,7 +24,7 @@ function Home() {
         </div>
       </div>
       <div className="dk-label" style={{ marginTop: 34 }}>Your videos</div>
-      <div className="dk-empty">Videos you script, record, generate or edit appear here.<br />Nothing is pre-made for you.</div>
+      <div className="dk-empty">Videos you script, record, drop in or edit appear here.<br />Nothing is pre-made for you.</div>
     </>
   );
 }
