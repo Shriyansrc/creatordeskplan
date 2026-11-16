@@ -1,0 +1,99 @@
+import { useState } from "react";
+import { Spinner } from "@/desk/ui";
+import { analyseReference, errorText, learnStyle } from "@/desk/api";
+import { usePersistentState } from "@/lib/use-persistent-state";
+import type { ReferenceResult, StyleResult } from "@/lib/ai/contracts";
+
+export function styleNotesOf(s: StyleResult | null): string | undefined {
+  if (!s) return undefined;
+  return `${s.name}. Tone: ${s.tone}. Rules: ${s.sentenceRules.join("; ")}. Uses: ${s.vocabulary.join(", ")}. Avoids: ${s.avoid.join("; ")}.`.slice(0, 1900);
+}
+
+export function StylePanel() {
+  const [style, setStyle] = usePersistentState<StyleResult | null>("style", null);
+  const [samples, setSamples] = useState("");
+  const [desc, setDesc] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const run = async () => {
+    if (busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      setStyle(await learnStyle({ samples, ...(desc.trim() ? { description: desc.trim() } : {}) }));
+    } catch (e) {
+      setErr(errorText(e));
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="dk-list" style={{ marginTop: 8 }}>
+      <span className="dk-tag est">AI READS YOUR WRITING</span>
+      {style ? (
+        <div className="dk-item">
+          <div className="dk-label">{style.name}</div>
+          <p>{style.tone}</p>
+          <ul>{style.sentenceRules.map((r) => <li key={r}>{r}</li>)}</ul>
+          <p>Words you use: {style.vocabulary.join(", ")}</p>
+          <p>Sounds like you: {style.sampleLine}</p>
+          <p>New scripts on this screen use this style.</p>
+          <button type="button" className="dk-chip" onClick={() => setStyle(null)}>Remove my style</button>
+        </div>
+      ) : (
+        <>
+          <label className="dk-item"><div className="dk-label">Paste 2 or 3 things you have written or said</div><textarea className="dk-field" rows={5} value={samples} onChange={(e) => setSamples(e.target.value)} placeholder="Captions, a script, a message to a friend..." /></label>
+          <label className="dk-item"><div className="dk-label">Anything else about how you sound (optional)</div><input className="dk-field" value={desc} onChange={(e) => setDesc(e.target.value)} /></label>
+          <button type="button" className="dk-btn" disabled={busy || samples.trim().length < 40} onClick={() => void run()}>{busy ? <Spinner /> : null}Learn my style</button>
+        </>
+      )}
+      {err && <p className="dk-err" role="alert">{err}</p>}
+    </div>
+  );
+}
+
+export function ReferenceAnalysis({ topic, niche }: { topic: string; niche: string }) {
+  const [platform, setPlatform] = useState<"yt" | "ig" | "x">("ig");
+  const [link, setLink] = useState("");
+  const [views, setViews] = useState("");
+  const [likes, setLikes] = useState("");
+  const [pasted, setPasted] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [res, setRes] = usePersistentState<{ key: string; data: ReferenceResult } | null>("ref-analysis", null);
+  const key = `${platform}|${link}|${pasted.slice(0, 40)}`;
+  const run = async () => {
+    if (busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const data = await analyseReference({ platform, link, views, likes, pasted, topic, niche });
+      setRes({ key, data });
+    } catch (e) {
+      setErr(errorText(e));
+    }
+    setBusy(false);
+  };
+  const r = res?.data;
+  return (
+    <div className="dk-list" style={{ marginTop: 8 }}>
+      <span className="dk-tag est">AI ANALYSES THE TEXT YOU PASTE</span>
+      <p>The AI cannot open Instagram, X or YouTube links. Paste the caption or transcript and it breaks down why it works and how to adapt it to your topic.</p>
+      <div className="dk-row" style={{ flexWrap: "wrap" }}>{(["ig", "yt", "x"] as const).map((x) => <button key={x} type="button" className={"dk-chip" + (platform === x ? " on" : "")} onClick={() => setPlatform(x)}>{x === "ig" ? "Instagram" : x === "yt" ? "YouTube" : "X"}</button>)}</div>
+      <label className="dk-item"><div className="dk-label">Link (optional, kept as a note)</div><input className="dk-field" value={link} onChange={(e) => setLink(e.target.value)} /></label>
+      <div className="dk-row"><input className="dk-field" aria-label="Views" placeholder="Views" value={views} onChange={(e) => setViews(e.target.value)} /><input className="dk-field" aria-label="Likes" placeholder="Likes" value={likes} onChange={(e) => setLikes(e.target.value)} /></div>
+      <label className="dk-item"><div className="dk-label">Caption or transcript</div><textarea className="dk-field" rows={5} value={pasted} onChange={(e) => setPasted(e.target.value)} /></label>
+      <button type="button" className="dk-btn" disabled={busy || pasted.trim().length < 20} onClick={() => void run()}>{busy ? <Spinner /> : null}Analyse this reference</button>
+      {err && <p className="dk-err" role="alert">{err}</p>}
+      {r && (
+        <div className="dk-item">
+          <div className="dk-label">What it is</div><p>{r.summary}</p>
+          <div className="dk-label">Hook pattern</div><p>{r.hookPattern}</p>
+          <div className="dk-label">Structure</div><ol>{r.structure.map((b) => <li key={b.beat}><b>{b.beat}</b>: {b.detail}</li>)}</ol>
+          <div className="dk-label">Why it works</div><ul>{r.whyItWorks.map((x) => <li key={x}>{x}</li>)}</ul>
+          <div className="dk-label">Adapt for you</div><ul>{r.adaptForMe.map((x) => <li key={x}>{x}</li>)}</ul>
+          {r.avoid.length > 0 && <><div className="dk-label">Avoid copying</div><ul>{r.avoid.map((x) => <li key={x}>{x}</li>)}</ul></>}
+        </div>
+      )}
+    </div>
+  );
+}
