@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PlatLogo } from "@/desk/ui";
 import { PLATFORM_COPY, useDesk } from "@/desk/store";
@@ -39,6 +39,7 @@ function Share() {
           )}
         </div>
       </div>
+      <p style={{ marginTop: 22 }}>Already posted? <Link to="/desk/results" style={{ color: "var(--blue)" }}>Add your real numbers</Link></p>
       <div className="dk-label" style={{ marginTop: 26 }}>Open your platforms</div>
       {d.profile.platforms.length === 0 ? <p>Choose platforms in Settings.</p> : (
         <div className="dk-list">{d.profile.platforms.map((p) => (
