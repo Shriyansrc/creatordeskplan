@@ -206,11 +206,12 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     setError("");
     const allWords: TranscriptWord[] = [];
     const knownOrigins = new Set(transcript.map((word) => word.clipId));
+    const missing: string[] = [];
     try {
       for (const clip of project.clips) {
         if (knownOrigins.has(clip.originId)) continue;
         const asset = assets.find((item) => item.sourceId === clip.sourceId);
-        if (!asset) throw new Error(`${clip.name} needs to be chosen again in this session.`);
+        if (!asset) { missing.push(clip.name); continue; }
         const words = await transcribeClip(clip, asset, setBusy);
         allWords.push(...words);
         knownOrigins.add(clip.originId);
@@ -218,6 +219,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       }
       if (!project.clips.length) throw new Error("Add a clip before transcribing.");
       setBusy("");
+      if (missing.length) setError(`${missing.join(", ")} needs to be chosen again before it can be transcribed. The other clips were transcribed.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Transcription failed"); setBusy(""); }
   };
 
