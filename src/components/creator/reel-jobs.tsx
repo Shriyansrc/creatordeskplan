@@ -30,7 +30,7 @@ export function ReelJobButton({ st }: { st: StudioShared }) {
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "The job could not be saved"); }
   };
   return <div style={{ marginTop: 14 }}>
-    <button className="btn g" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? "Close reel request" : "Generate a motion graphic reel for this video instead"}</button>
+    <div><button className="btn g" disabled aria-disabled="true">Generate a motion graphic reel for this video instead</button><p className="note">Reel generation is switched off until usage is authorized by the account owner. Nothing is charged.</p></div>
     {open && <div className="panel" style={{ marginTop: 10 }}>
       <p className="note">The reel service is not connected. Requests are saved on this device only and are not sent to anyone.</p>
       <div className="row" style={{ flexWrap: "wrap" }}>{(["timeline", "upload"] as const).map((item) => <button key={item} className={"chip" + (source === item ? " on" : "")} aria-pressed={source === item} onClick={() => setSource(item)}>{item === "timeline" ? "Current timeline export" : "Upload a file"}</button>)}</div>
