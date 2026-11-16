@@ -9,7 +9,7 @@ function json(body: unknown, status = 200) {
 }
 
 function plain(html: string) {
-  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+\n/g, "\n").trim();
+  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&mdash;/g, "-").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+\n/g, "\n").trim();
 }
 
 export const Route = createFileRoute("/api/link-meta")({
@@ -34,11 +34,11 @@ export const Route = createFileRoute("/api/link-meta")({
         else if (X.has(u.hostname)) endpoint = `https://publish.twitter.com/oembed?omit_script=1&url=${encodeURIComponent(u.toString())}`;
         else return json({ ok: false, reason: "Only YouTube and X links can be read. Paste the caption or transcript instead." }, 422);
         try {
-          const res = await fetch(endpoint, { signal: AbortSignal.timeout(7000), headers: { accept: "application/json" } });
+          const res = await fetch(endpoint, { signal: AbortSignal.timeout(7000), redirect: "error", headers: { accept: "application/json" } });
           if (!res.ok) return json({ ok: false, reason: "That link is private, removed or could not be read. Paste the text instead." }, 422);
           const d = (await res.json()) as { title?: string; author_name?: string; html?: string };
           const text = d.html ? plain(d.html) : "";
-          return json({ ok: true, title: d.title ?? "", author: d.author_name ?? "", text: text.slice(0, 1500) });
+          return json({ ok: true, title: String(d.title ?? "").slice(0, 200), author: String(d.author_name ?? "").slice(0, 100), text: text.slice(0, 1500) });
         } catch {
           return json({ ok: false, reason: "Could not reach the platform just now. Paste the text instead." }, 502);
         }
