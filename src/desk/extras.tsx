@@ -75,13 +75,35 @@ export function ReferenceAnalysis({ topic, niche }: { topic: string; niche: stri
     }
     setBusy(false);
   };
+  const [fetching, setFetching] = useState(false);
+  const [note, setNote] = useState("");
+  const fetchLink = async () => {
+    if (fetching) return;
+    setFetching(true);
+    setNote("");
+    try {
+      const r = await fetch("/api/link-meta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ link }) });
+      const d = (await r.json()) as { ok: boolean; reason?: string; title?: string; author?: string; text?: string };
+      if (!d.ok) setNote(d.reason ?? "Could not read that link.");
+      else {
+        const parts = [d.title && `Title: ${d.title}`, d.author && `By: ${d.author}`, d.text && `Post text: ${d.text}`].filter(Boolean).join("\n");
+        setPasted((cur) => (cur.trim() ? `${cur}\n${parts}` : parts));
+        setNote("Read the public details from the link. Add the caption or transcript for a deeper breakdown.");
+      }
+    } catch {
+      setNote("Could not read that link. Paste the text instead.");
+    }
+    setFetching(false);
+  };
   const r = res?.data;
   return (
     <div className="dk-list" style={{ marginTop: 8 }}>
-      <span className="dk-tag est">AI ANALYSES THE TEXT YOU PASTE</span>
-      <p>The AI cannot open Instagram, X or YouTube links. Paste the caption or transcript and it breaks down why it works and how to adapt it to your topic.</p>
+      <span className="dk-tag est">AI ANALYSES TEXT</span>
+      <p>YouTube and X links: the app reads the public title, channel and post text. Instagram does not allow that, so paste its caption. The AI never watches the video itself, so add the caption or transcript for a deeper breakdown.</p>
       <div className="dk-row" style={{ flexWrap: "wrap" }}>{(["ig", "yt", "x"] as const).map((x) => <button key={x} type="button" className={"dk-chip" + (platform === x ? " on" : "")} onClick={() => setPlatform(x)}>{x === "ig" ? "Instagram" : x === "yt" ? "YouTube" : "X"}</button>)}</div>
-      <label className="dk-item"><div className="dk-label">Link (optional, kept as a note)</div><input className="dk-field" value={link} onChange={(e) => setLink(e.target.value)} /></label>
+      <label className="dk-item"><div className="dk-label">Link (optional)</div><input className="dk-field" value={link} onChange={(e) => setLink(e.target.value)} /></label>
+      {platform !== "ig" && <button type="button" className="dk-btn secondary" disabled={fetching || !link.trim()} onClick={() => void fetchLink()}>{fetching ? <Spinner /> : null}Read details from the link</button>}
+      {note && <p role="status" style={{ fontSize: 14 }}>{note}</p>}
       <div className="dk-row"><input className="dk-field" aria-label="Views" placeholder="Views" value={views} onChange={(e) => setViews(e.target.value)} /><input className="dk-field" aria-label="Likes" placeholder="Likes" value={likes} onChange={(e) => setLikes(e.target.value)} /></div>
       <label className="dk-item"><div className="dk-label">Caption or transcript</div><textarea className="dk-field" rows={5} value={pasted} onChange={(e) => setPasted(e.target.value)} /></label>
       <button type="button" className="dk-btn" disabled={busy || pasted.trim().length < 20} onClick={() => void run()}>{busy ? <Spinner /> : null}Analyse this reference</button>
