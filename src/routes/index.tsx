@@ -13,6 +13,8 @@ import {
   ScriptScreen,
 } from "@/components/creator/workflow";
 import "@/landing.css";
+import { useAuth, signOut, displayName } from "@/hooks/use-auth";
+import { GoogleButton } from "@/components/creator/google-button";
 import type { StudioShared } from "@/lib/creator-shared";
 
 export const Route = createFileRoute("/")({
@@ -833,6 +835,7 @@ function usePersist<T>(key: string, init: T): [T, (v: T | ((o: T) => T)) => void
 
 /* ------------------------------ app frame ------------------------------ */
 function AppFrame({ s, go }: { s: Screen; go: (s: Screen) => void }) {
+  const { user } = useAuth();
   const [st, setSt] = usePersist<Shared>("shared", {
     topic: "Study help for school students",
     goal: "Promote my business",
@@ -874,11 +877,11 @@ function AppFrame({ s, go }: { s: Screen; go: (s: Screen) => void }) {
             <button className="help">Help</button>
             <button
               className="av"
-              onClick={() => go("account")}
-              aria-label="Account: not signed in"
+              onClick={() => go(user ? "account" : "signin")}
+              aria-label={user ? "Account: " + displayName(user) : "Sign in"}
               style={{ width: "auto", padding: "0 12px", borderRadius: 999, fontSize: 12.5 }}
             >
-              Guest
+              {user ? displayName(user).split(" ")[0] : "Sign in"}
             </button>
           </div>
         )}
@@ -908,8 +911,10 @@ function AppFrame({ s, go }: { s: Screen; go: (s: Screen) => void }) {
               fontSize: 13.5,
             }}
           >
-            Not signed in. Nothing here is saved to an account; your work stays in this browser. Items marked Sample are
-            examples, not yours.
+            {user
+              ? "Signed in as " + displayName(user) + ". Your work still stays in this browser; it is not synced yet."
+              : "Not signed in. Your work stays in this browser."}{" "}
+            Items marked Sample are examples, not yours.
           </div>
           {renderScreen(s, st, set, go)}
         </div>
@@ -1002,6 +1007,7 @@ function Notice({ show, text }: { show: boolean; text: string }) {
 
 /* ------------------------------ screens ------------------------------ */
 function SignIn({ go }: { go: (s: Screen) => void }) {
+  const { user } = useAuth();
   return (
     <div className="g2" style={{ alignItems: "center", minHeight: 420 }}>
       <div>
@@ -1011,19 +1017,25 @@ function SignIn({ go }: { go: (s: Screen) => void }) {
         <h1>One place for the whole month.</h1>
         <p className="sub">Find your niche, plan 30 days, write scripts, make the video, edit it and post it.</p>
         <div style={{ marginTop: 22 }}>
-          <button className="btn" disabled>
-            Google sign-in: Not connected
-          </button>
-          <p className="note">Accounts are not available yet, so there is nothing to sign up for.</p>
+          {user ? (
+            <>
+              <p className="note">Signed in as {displayName(user)}.</p>
+              <button className="btn" onClick={() => go("niche")}>
+                Continue to your studio
+              </button>
+            </>
+          ) : (
+            <GoogleButton />
+          )}
         </div>
-        <p className="note">
-          There is no account backend yet. You can still plan, script and edit here; your work stays in this browser.
-        </p>
-        <div style={{ marginTop: 12 }}>
-          <button className="btn g" onClick={() => go("niche")}>
-            Start without an account
-          </button>
-        </div>
+        <p className="note">Signing in is optional. Your plans and drafts stay in this browser either way.</p>
+        {!user && (
+          <div style={{ marginTop: 12 }}>
+            <button className="btn g" onClick={() => go("niche")}>
+              Start without an account
+            </button>
+          </div>
+        )}
       </div>
       <div className="dark" style={{ padding: 22 }}>
         <div className="lab">Inside the studio</div>
@@ -1329,6 +1341,7 @@ function Insights({ go }: { go: (s: Screen) => void }) {
 }
 
 function Account({ st, go }: { st: Shared; go: (s: Screen) => void }) {
+  const { user } = useAuth();
   const [note, setNote] = useState(false);
   const downloadPlan = () => {
     const g = (k: string) => {
@@ -1371,6 +1384,26 @@ function Account({ st, go }: { st: Shared; go: (s: Screen) => void }) {
   return (
     <div>
       <Head t="Your studio." sub="Your profile and connected accounts." />
+      <div className="card row" style={{ marginBottom: 16 }}>
+        {user ? (
+          <>
+            <span>
+              Signed in with Google as <b>{displayName(user)}</b>
+              {user.email && user.email !== displayName(user) ? " (" + user.email + ")" : ""}
+            </span>
+            <span className="sp" />
+            <button className="btn s g" onClick={() => void signOut()}>
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <span>Not signed in. Signing in is optional.</span>
+            <span className="sp" />
+            <GoogleButton />
+          </>
+        )}
+      </div>
       <ConnectionsPanel />
       <ReelJobsPanel />
       <div className="g2" style={{ gridTemplateColumns: "1fr" }}>
