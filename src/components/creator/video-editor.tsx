@@ -155,7 +155,16 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     try {
       const added = await addSessionClips(files);
       setAssets(getSessionClips());
-      commit({ ...project, clips: [...project.clips, ...added.map(clipFromAsset)] });
+      const live = new Set(getSessionClips().map((asset) => asset.sourceId));
+      const used = new Set<string>();
+      const relinked = project.clips.map((clip) => {
+        if (live.has(clip.sourceId)) return clip;
+        const match = added.find((asset) => asset.name === clip.name && !used.has(asset.sourceId));
+        if (!match) return clip;
+        used.add(match.sourceId);
+        return { ...clip, sourceId: match.sourceId };
+      });
+      commit({ ...project, clips: [...relinked, ...added.filter((asset) => !used.has(asset.sourceId)).map(clipFromAsset)] });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Clip import failed"); }
     finally { setBusy(""); }
   };
