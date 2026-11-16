@@ -11,7 +11,6 @@ import { addSessionClips, getSessionClips, saveSessionExport } from "@/lib/edito
 import { transcribeClip } from "@/lib/editor/transcribe";
 import type { ClipAsset, EditorClip, EditorProject, PendingEdit, TranscriptWord } from "@/lib/editor/types";
 import { usePersistentState } from "@/lib/use-persistent-state";
-import { ReelJobButton } from "./reel-jobs";
 
 const TOOLS = ["Media", "Trim", "Captions", "Crop", "Colour", "Style", "Engage", "Sound"] as const;
 const RATIOS = ["9:16", "1:1", "4:5", "16:9"] as const;
@@ -34,6 +33,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const [transcript, setTranscript] = usePersistentState<TranscriptWord[]>("transcript", []);
   const [assets, setAssets] = useState<ClipAsset[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [dropOver, setDropOver] = useState(false);
   const [pending, setPending] = useState<PendingEdit | null>(null);
   const [prompt, setPrompt] = useState("");
   const [promptMode, setPromptMode] = useState<"basic" | "ai">("basic");
@@ -169,6 +169,14 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     finally { setBusy(""); }
   };
 
+  const takeFiles = async (list: File[]) => {
+    const ok = list.filter((f) => f.type.startsWith("video/") || /\.(mp4|mov|webm|m4v|mkv)$/i.test(f.name));
+    const bad = list.length - ok.length;
+    if (!ok.length) { setError(list.length ? "That is not a video file. Drop MP4, MOV or WebM clips." : ""); return; }
+    await importFiles(ok);
+    if (bad) setError(`${bad} file${bad === 1 ? " was" : "s were"} skipped because ${bad === 1 ? "it is" : "they are"} not video.`);
+  };
+
   const hydrateSilence = async (operations: EditOperation[]) => {
     const hydrated: EditOperation[] = [];
     for (const operation of operations) {
@@ -256,6 +264,11 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     <div className="row" style={{ marginBottom: 14, flexWrap: "wrap" }}><div style={{ flex: 1, minWidth: 200 }}><h1 style={{ fontSize: 38 }}>Edit your video</h1><p className="sub">Trim, colour, crop, captions and looks. Changes are reversible. Your source stays safe.</p></div><button className="btn g" onClick={() => setPlaying(!playing)} disabled={!activeClip}>{playing ? "Pause" : "Play preview"}</button><button className="btn" onClick={doExport} disabled={exporting || Boolean(busy) || !project.clips.length}>Save video</button></div>
     <div className="row" style={{ flexWrap: "wrap", marginBottom: 10 }}><button className="btn s g" onClick={undo} disabled={!history.current.length}>Undo</button><button className="btn s g" onClick={redo} disabled={!future.current.length}>Redo</button><span className="tg r">Basic, runs in your browser</span>{busy && <span className="tg n" role="status">{busy}</span>}</div>
     {error && <div className="notice" role="alert">{error}</div>}
+    <label className={"dropzone" + (dropOver ? " over" : "")} onDragOver={(event) => { event.preventDefault(); setDropOver(true); }} onDragLeave={() => setDropOver(false)} onDrop={(event) => { event.preventDefault(); setDropOver(false); void takeFiles(Array.from(event.dataTransfer.files)); }} style={{ display: "block", marginTop: 12, padding: "22px 16px", border: "2px dashed #9fb3d6", borderRadius: 16, textAlign: "center", cursor: "pointer", background: dropOver ? "#eaf1ff" : "transparent" }}>
+      <b style={{ display: "block", fontSize: 18 }}>Drop your clips here</b>
+      <span style={{ fontSize: 14 }}>or tap to choose videos from your device. They open on the timeline below and stay on this device.</span>
+      <input type="file" accept="video/*" multiple hidden onChange={(event) => { void takeFiles(Array.from(event.target.files ?? [])); event.target.value = ""; }} />
+    </label>
     <div className="ed" style={{ marginTop: 12 }}>
       <div className="tools">{TOOLS.map((tool) => <button key={tool} className={st.tool === tool ? "on" : ""} onClick={() => set({ tool })}>{tool}</button>)}</div>
       <div>
@@ -304,6 +317,6 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     </div>
     <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div className="nav"><button className={promptMode === "basic" ? "on" : ""} onClick={() => setPromptMode("basic")}>Basic local mode</button><button className={promptMode === "ai" ? "on" : ""} onClick={() => setPromptMode("ai")} disabled={connection.state !== "connected"}>AI mode</button></div><span className="tg n">{promptMode === "basic" ? "Basic, runs in your browser" : connection.state === "connected" ? "Connected" : "Not connected"}</span></div><div className="row" style={{ marginTop: 10 }}><input ref={promptRef} className="field" aria-label="Edit by prompt" placeholder="Tell the editor what to change, in your words..." value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void previewPrompt(); }} /><button className="btn" disabled={Boolean(busy) || !prompt.trim() || (promptMode === "ai" && connection.state !== "connected")} onClick={previewPrompt}>Apply edit</button></div>{promptMode === "ai" && connection.state !== "connected" && <p className="note">{NOT_CONNECTED_COPY}</p>}<p className="note">Every edit shows its change list first. Apply or undo. Nothing silently changes.</p></div>
     {pending && <div className="panel pending-edit" style={{ marginTop: 12 }}><div className="row"><h2>Review the proposed edit</h2><span className="sp" /><span className={"tg " + (pending.source === "ai" ? "r" : "n")}>{pending.source === "ai" ? "Connected AI operations" : "Basic local operations"}</span></div><p>{pending.summary}</p><div className="stack" style={{ margin: "12px 0" }}>{pending.operations.map((operation, index) => <div className="card" key={`${operation.type}-${index}`}>{describeOperation(operation)}</div>)}</div><div className="row" style={{ flexWrap: "wrap" }}><button className="btn" onClick={() => commit(pending.preview)}>Accept edit</button><button className="btn g" onClick={() => setPending(null)}>Reject</button><button className="btn g" onClick={() => { setPrompt(pending.prompt); setPending(null); promptRef.current?.focus(); }}>Tweak prompt</button></div></div>}
-    <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div><div className="lab">Real on-device export</div><select className="field" aria-label="Export format" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as "webm" | "mp4")}><option value="webm">WebM</option><option value="mp4">MP4 (local FFmpeg conversion)</option></select></div><span className="sp" /><button className="btn" disabled={exporting || !project.clips.length} onClick={doExport}>Export video</button>{exportUrl && <a className="btn g" href={exportUrl} download={exportName}>Download {exportFormat.toUpperCase()}</a>}{exportUrl && <button className="btn g" onClick={() => go("publish")}>Continue to publish</button>}</div>{exportLabel && <><div className="bar" style={{ marginTop: 12 }}><i style={{ width: `${Math.round(exportProgress * 100)}%` }} /></div><p className="note">{exportLabel} · {Math.round(exportProgress * 100)}%</p></>}<p className="note">Export renders a new file and never modifies the original. MP4 conversion loads the FFmpeg WebAssembly core from this app on first use; WebM needs no provider.</p><ReelJobButton st={st} /></div>
+    <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div><div className="lab">Real on-device export</div><select className="field" aria-label="Export format" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as "webm" | "mp4")}><option value="webm">WebM</option><option value="mp4">MP4 (local FFmpeg conversion)</option></select></div><span className="sp" /><button className="btn" disabled={exporting || !project.clips.length} onClick={doExport}>Export video</button>{exportUrl && <a className="btn g" href={exportUrl} download={exportName}>Download {exportFormat.toUpperCase()}</a>}{exportUrl && <button className="btn g" onClick={() => go("publish")}>Continue to publish</button>}</div>{exportLabel && <><div className="bar" style={{ marginTop: 12 }}><i style={{ width: `${Math.round(exportProgress * 100)}%` }} /></div><p className="note">{exportLabel} · {Math.round(exportProgress * 100)}%</p></>}<p className="note">Export renders a new file and never modifies the original. MP4 conversion loads the FFmpeg WebAssembly core from this app on first use; WebM needs no provider.</p></div>
   </div>;
 }
