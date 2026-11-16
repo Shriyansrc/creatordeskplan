@@ -17,6 +17,7 @@ import { Route as DeskCreateRouteImport } from './routes/desk.create'
 import { Route as DeskEditorRouteImport } from './routes/desk.editor'
 import { Route as DeskNicheRouteImport } from './routes/desk.niche'
 import { Route as DeskPlanRouteImport } from './routes/desk.plan'
+import { Route as DeskResultsRouteImport } from './routes/desk.results'
 import { Route as DeskSettingsRouteImport } from './routes/desk.settings'
 import { Route as DeskShareRouteImport } from './routes/desk.share'
 import { Route as ApiAiAudienceRouteImport } from './routes/api/ai/audience'
@@ -72,6 +73,11 @@ const DeskNicheRoute = DeskNicheRouteImport.update({
 const DeskPlanRoute = DeskPlanRouteImport.update({
   id: '/plan',
   path: '/plan',
+  getParentRoute: () => DeskRoute,
+} as any)
+const DeskResultsRoute = DeskResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
   getParentRoute: () => DeskRoute,
 } as any)
 const DeskSettingsRoute = DeskSettingsRouteImport.update({
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/desk/editor': typeof DeskEditorRoute
   '/desk/niche': typeof DeskNicheRoute
   '/desk/plan': typeof DeskPlanRoute
+  '/desk/results': typeof DeskResultsRoute
   '/desk/settings': typeof DeskSettingsRoute
   '/desk/share': typeof DeskShareRoute
   '/desk/': typeof DeskIndexRoute
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/desk/editor': typeof DeskEditorRoute
   '/desk/niche': typeof DeskNicheRoute
   '/desk/plan': typeof DeskPlanRoute
+  '/desk/results': typeof DeskResultsRoute
   '/desk/settings': typeof DeskSettingsRoute
   '/desk/share': typeof DeskShareRoute
   '/desk': typeof DeskIndexRoute
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/desk/editor': typeof DeskEditorRoute
   '/desk/niche': typeof DeskNicheRoute
   '/desk/plan': typeof DeskPlanRoute
+  '/desk/results': typeof DeskResultsRoute
   '/desk/settings': typeof DeskSettingsRoute
   '/desk/share': typeof DeskShareRoute
   '/desk/': typeof DeskIndexRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/desk/editor'
     | '/desk/niche'
     | '/desk/plan'
+    | '/desk/results'
     | '/desk/settings'
     | '/desk/share'
     | '/desk/'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/desk/editor'
     | '/desk/niche'
     | '/desk/plan'
+    | '/desk/results'
     | '/desk/settings'
     | '/desk/share'
     | '/desk'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/desk/editor'
     | '/desk/niche'
     | '/desk/plan'
+    | '/desk/results'
     | '/desk/settings'
     | '/desk/share'
     | '/desk/'
@@ -389,6 +401,13 @@ declare module '@tanstack/react-router' {
       path: '/plan'
       fullPath: '/desk/plan'
       preLoaderRoute: typeof DeskPlanRouteImport
+      parentRoute: typeof DeskRoute
+    }
+    '/desk/results': {
+      id: '/desk/results'
+      path: '/results'
+      fullPath: '/desk/results'
+      preLoaderRoute: typeof DeskResultsRouteImport
       parentRoute: typeof DeskRoute
     }
     '/desk/settings': {
@@ -511,6 +530,7 @@ interface DeskRouteChildren {
   DeskEditorRoute: typeof DeskEditorRoute
   DeskNicheRoute: typeof DeskNicheRoute
   DeskPlanRoute: typeof DeskPlanRoute
+  DeskResultsRoute: typeof DeskResultsRoute
   DeskSettingsRoute: typeof DeskSettingsRoute
   DeskShareRoute: typeof DeskShareRoute
   DeskIndexRoute: typeof DeskIndexRoute
@@ -521,6 +541,7 @@ const DeskRouteChildren: DeskRouteChildren = {
   DeskEditorRoute: DeskEditorRoute,
   DeskNicheRoute: DeskNicheRoute,
   DeskPlanRoute: DeskPlanRoute,
+  DeskResultsRoute: DeskResultsRoute,
   DeskSettingsRoute: DeskSettingsRoute,
   DeskShareRoute: DeskShareRoute,
   DeskIndexRoute: DeskIndexRoute,
