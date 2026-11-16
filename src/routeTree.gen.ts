@@ -27,10 +27,12 @@ import { Route as ApiAiGoalRouteImport } from './routes/api/ai/goal'
 import { Route as ApiAiNichesRouteImport } from './routes/api/ai/niches'
 import { Route as ApiAiPlanRouteImport } from './routes/api/ai/plan'
 import { Route as ApiAiPlatformsRouteImport } from './routes/api/ai/platforms'
+import { Route as ApiAiReferenceRouteImport } from './routes/api/ai/reference'
 import { Route as ApiAiReferencesRouteImport } from './routes/api/ai/references'
 import { Route as ApiAiResearchRouteImport } from './routes/api/ai/research'
 import { Route as ApiAiScriptRouteImport } from './routes/api/ai/script'
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai/status'
+import { Route as ApiAiStyleRouteImport } from './routes/api/ai/style'
 import { Route as ApiAiTopicsRouteImport } from './routes/api/ai/topics'
 import { Route as ApiAiVideoRouteImport } from './routes/api/ai/video'
 import { Route as ApiAiVoiceRouteImport } from './routes/api/ai/voice'
@@ -125,6 +127,11 @@ const ApiAiPlatformsRoute = ApiAiPlatformsRouteImport.update({
   path: '/api/ai/platforms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiReferenceRoute = ApiAiReferenceRouteImport.update({
+  id: '/api/ai/reference',
+  path: '/api/ai/reference',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAiReferencesRoute = ApiAiReferencesRouteImport.update({
   id: '/api/ai/references',
   path: '/api/ai/references',
@@ -143,6 +150,11 @@ const ApiAiScriptRoute = ApiAiScriptRouteImport.update({
 const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
   id: '/api/ai/status',
   path: '/api/ai/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiStyleRoute = ApiAiStyleRouteImport.update({
+  id: '/api/ai/style',
+  path: '/api/ai/style',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiTopicsRoute = ApiAiTopicsRouteImport.update({
@@ -180,10 +192,12 @@ export interface FileRoutesByFullPath {
   '/api/ai/niches': typeof ApiAiNichesRoute
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
+  '/api/ai/reference': typeof ApiAiReferenceRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
   '/api/ai/status': typeof ApiAiStatusRoute
+  '/api/ai/style': typeof ApiAiStyleRoute
   '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
@@ -206,10 +220,12 @@ export interface FileRoutesByTo {
   '/api/ai/niches': typeof ApiAiNichesRoute
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
+  '/api/ai/reference': typeof ApiAiReferenceRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
   '/api/ai/status': typeof ApiAiStatusRoute
+  '/api/ai/style': typeof ApiAiStyleRoute
   '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
@@ -234,10 +250,12 @@ export interface FileRoutesById {
   '/api/ai/niches': typeof ApiAiNichesRoute
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
+  '/api/ai/reference': typeof ApiAiReferenceRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
   '/api/ai/status': typeof ApiAiStatusRoute
+  '/api/ai/style': typeof ApiAiStyleRoute
   '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
@@ -263,10 +281,12 @@ export interface FileRouteTypes {
     | '/api/ai/niches'
     | '/api/ai/plan'
     | '/api/ai/platforms'
+    | '/api/ai/reference'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
     | '/api/ai/status'
+    | '/api/ai/style'
     | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
@@ -289,10 +309,12 @@ export interface FileRouteTypes {
     | '/api/ai/niches'
     | '/api/ai/plan'
     | '/api/ai/platforms'
+    | '/api/ai/reference'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
     | '/api/ai/status'
+    | '/api/ai/style'
     | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
@@ -316,10 +338,12 @@ export interface FileRouteTypes {
     | '/api/ai/niches'
     | '/api/ai/plan'
     | '/api/ai/platforms'
+    | '/api/ai/reference'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
     | '/api/ai/status'
+    | '/api/ai/style'
     | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
@@ -336,10 +360,12 @@ export interface RootRouteChildren {
   ApiAiNichesRoute: typeof ApiAiNichesRoute
   ApiAiPlanRoute: typeof ApiAiPlanRoute
   ApiAiPlatformsRoute: typeof ApiAiPlatformsRoute
+  ApiAiReferenceRoute: typeof ApiAiReferenceRoute
   ApiAiReferencesRoute: typeof ApiAiReferencesRoute
   ApiAiResearchRoute: typeof ApiAiResearchRoute
   ApiAiScriptRoute: typeof ApiAiScriptRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
+  ApiAiStyleRoute: typeof ApiAiStyleRoute
   ApiAiTopicsRoute: typeof ApiAiTopicsRoute
   ApiAiVideoRoute: typeof ApiAiVideoRoute
   ApiAiVoiceRoute: typeof ApiAiVoiceRoute
@@ -473,6 +499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiPlatformsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/reference': {
+      id: '/api/ai/reference'
+      path: '/api/ai/reference'
+      fullPath: '/api/ai/reference'
+      preLoaderRoute: typeof ApiAiReferenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ai/references': {
       id: '/api/ai/references'
       path: '/api/ai/references'
@@ -499,6 +532,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ai/status'
       fullPath: '/api/ai/status'
       preLoaderRoute: typeof ApiAiStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/style': {
+      id: '/api/ai/style'
+      path: '/api/ai/style'
+      fullPath: '/api/ai/style'
+      preLoaderRoute: typeof ApiAiStyleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai/topics': {
@@ -560,10 +600,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiNichesRoute: ApiAiNichesRoute,
   ApiAiPlanRoute: ApiAiPlanRoute,
   ApiAiPlatformsRoute: ApiAiPlatformsRoute,
+  ApiAiReferenceRoute: ApiAiReferenceRoute,
   ApiAiReferencesRoute: ApiAiReferencesRoute,
   ApiAiResearchRoute: ApiAiResearchRoute,
   ApiAiScriptRoute: ApiAiScriptRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
+  ApiAiStyleRoute: ApiAiStyleRoute,
   ApiAiTopicsRoute: ApiAiTopicsRoute,
   ApiAiVideoRoute: ApiAiVideoRoute,
   ApiAiVoiceRoute: ApiAiVoiceRoute,
