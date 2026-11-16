@@ -115,3 +115,4 @@ textarea.dk-field{resize:vertical;min-height:110px}
 .old-ed .editor-empty p{color:#4a5668!important;font-size:15px}
 .old-ed .sub{color:#4a5668;font-size:18px}
 .old-ed h1{font-size:clamp(34px,6vw,54px)!important;line-height:1.05;margin:0 0 8px}
+@media(max-width:820px){.is-preview .dk-mobnav{padding-bottom:46px}}
