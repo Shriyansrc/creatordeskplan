@@ -108,11 +108,18 @@ function parseJson(text: string): unknown {
   return JSON.parse(cleaned);
 }
 
+function stripEmDashes(value: unknown): unknown {
+  if (typeof value === "string") return value.replace(/\s*\u2014\s*/g, (m) => (/\s/.test(m) ? " - " : ", "));
+  if (Array.isArray(value)) return value.map(stripEmDashes);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, stripEmDashes(v)]));
+  return value;
+}
+
 export async function generateValidated<T>(settings: ProviderSettings, task: AITask, input: unknown, schema: ZodType<T>): Promise<T> {
   if (!providerIsConfigured(settings)) throw new Error("AI provider not configured");
-  const system = `You are Creator Desk's ${task} engine. Return one valid JSON object only, with no markdown or commentary. ${TASK_RULES[task]}`;
+  const system = `You are Creator Desk's ${task} engine. Return one valid JSON object only, with no markdown or commentary. Never use em dashes; use a comma, full stop or hyphen instead. ${TASK_RULES[task]}`;
   const text = ownKeyConfigured(settings)
     ? await callProvider(settings as ConfiguredProviderSettings, system, JSON.stringify(input))
     : await callBuiltIn(system, JSON.stringify(input));
-  return schema.parse(parseJson(text));
+  return schema.parse(stripEmDashes(parseJson(text)));
 }
