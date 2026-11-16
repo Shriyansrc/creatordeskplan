@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { GoogleButton } from "@/components/creator/google-button";
 import { useAuth, signOut, displayName } from "@/hooks/use-auth";
+import { SyncPanel } from "@/desk/extras";
 import { PlatLogo } from "@/desk/ui";
 import { PLATFORM_COPY, hoursLabel, resetDesk, useDesk } from "@/desk/store";
 import { ALL_PLATFORMS } from "@/lib/creator-shared";
@@ -38,13 +39,14 @@ function Settings() {
           {user ? (
             <>
               <h3>Signed in</h3>
-              <p style={{ margin: "6px 0 14px" }}>{displayName(user)}. Your plans stay in this browser; syncing them to your account is not built yet.</p>
-              <button type="button" className="dk-btn secondary" onClick={() => void signOut()}>Sign out</button>
+              <p style={{ margin: "6px 0 14px" }}>{displayName(user)}. Save your plans to your account to open them on another device.</p>
+              <SyncPanel userId={user.id} />
+              <button type="button" className="dk-btn secondary" style={{ marginTop: 14 }} onClick={() => void signOut()}>Sign out</button>
             </>
           ) : (
             <>
               <h3>Not signed in</h3>
-              <p style={{ margin: "6px 0 14px" }}>Signing in is optional. Syncing plans across devices is not built yet.</p>
+              <p style={{ margin: "6px 0 14px" }}>Signing in is optional. Sign in to save your plans to your account and open them on another device.</p>
               <GoogleButton label="Sign in with Google" />
             </>
           )}
