@@ -1,5 +1,6 @@
 import { z, type ZodType } from "zod";
 import type { AITask } from "./contracts";
+import { generateChatCompletion } from "@lovable.dev/ai-gateway";
 
 export type ProviderSettings = {
   provider: string | undefined;
@@ -17,8 +18,27 @@ const TASK_RULES: Record<AITask, string> = {
   captions: "Return captions[{platform,text}], one for every requested platform. Platform values only ig, yt, li, x. Adapt length and tone per platform from the supplied script; do not add claims or hashtags not supported by it.",
 };
 
-export function providerIsConfigured(settings: ProviderSettings) {
+function ownKeyConfigured(settings: ProviderSettings) {
   return Boolean(settings.provider?.trim() && settings.apiKey?.trim() && settings.model?.trim());
+}
+
+/** Built-in Lovable AI is used whenever no own provider key is set. */
+function builtInAvailable() {
+  return Boolean(process.env["LOVABLE_API_KEY"]);
+}
+
+export function providerIsConfigured(settings: ProviderSettings) {
+  return ownKeyConfigured(settings) || builtInAvailable();
+}
+
+async function callBuiltIn(system: string, prompt: string): Promise<string> {
+  const result = await generateChatCompletion({
+    model: "openai/gpt-6.1-terra",
+    response_format: { type: "json_object" },
+    messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+  });
+  const content = result.choices[0]?.message.content;
+  return typeof content === "string" ? content : "";
 }
 
 function endpointFor(provider: string, model: string) {
@@ -86,8 +106,9 @@ function parseJson(text: string): unknown {
 
 export async function generateValidated<T>(settings: ProviderSettings, task: AITask, input: unknown, schema: ZodType<T>): Promise<T> {
   if (!providerIsConfigured(settings)) throw new Error("AI provider not configured");
-  const complete = settings as ConfiguredProviderSettings;
   const system = `You are Creator Desk's ${task} engine. Return one valid JSON object only, with no markdown or commentary. ${TASK_RULES[task]}`;
-  const text = await callProvider(complete, system, JSON.stringify(input));
+  const text = ownKeyConfigured(settings)
+    ? await callProvider(settings as ConfiguredProviderSettings, system, JSON.stringify(input))
+    : await callBuiltIn(system, JSON.stringify(input));
   return schema.parse(parseJson(text));
 }

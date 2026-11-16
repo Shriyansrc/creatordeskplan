@@ -31,7 +31,7 @@ use the editor.
 
 ## Creator Desk architecture
 
-- AI tasks use typed contracts in `src/lib/ai/` and same-origin TanStack server routes; browser code never reads provider credentials, because credentials must remain server-only.
+- AI tasks use typed contracts in `src/lib/ai/` and same-origin TanStack server routes; the built-in Lovable AI is the default and an own AI_PROVIDER key overrides it; browser code never reads credentials, because credentials must remain server-only.
 - Browser media editing and export live in `src/lib/editor/` and lazy-load FFmpeg/Whisper only after user action, because the Cloudflare Worker must not bundle or execute browser media engines.
 - Session `File`/`Blob` objects use the in-memory editor store while durable planning and edit decisions use the `cd:` storage prefix, because binary media must not be written to localStorage.
 - Generation and retrieval providers (YouTube, voice, video) are reached only through `/api/ai/*` server routes with zod-validated responses, and media jobs are stateless provider-id polling, because Workers keep no job memory between requests.

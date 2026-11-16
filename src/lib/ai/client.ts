@@ -36,7 +36,7 @@ export async function callAI<I, O>(path: string, input: I): Promise<O> {
   return body.data;
 }
 
-export const NOT_CONNECTED_COPY = "Not connected — AI_PROVIDER, AI_API_KEY and AI_MODEL must be set on the server by the owner.";
+export const NOT_CONNECTED_COPY = "Not connected — built-in AI is unavailable right now.";
 
 export type ServiceStatus = { state: "checking" } | { state: "ready"; ai: boolean; references: boolean; voice: boolean; video: boolean };
 
