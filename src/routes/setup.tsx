@@ -275,6 +275,7 @@ function PlatformStep() {
   const toggle = (id: Platform) =>
     patchProfile({ aiPlatforms: false, platformReasons: [], platforms: getDesk().profile.platforms.includes(id) ? getDesk().profile.platforms.filter((x) => x !== id) : [...getDesk().profile.platforms, id] });
   const decide = async () => {
+    if (busy) return;
     setBusy(true);
     setErr("");
     try {
