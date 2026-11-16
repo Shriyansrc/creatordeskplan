@@ -97,3 +97,37 @@ export function ReferenceAnalysis({ topic, niche }: { topic: string; niche: stri
     </div>
   );
 }
+
+export function ListenButton({ text }: { text: string }) {
+  const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState("");
+  const [type, setType] = useState("");
+  const [err, setErr] = useState("");
+  const run = async () => {
+    if (busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await fetch("/api/ai/speech", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: text.slice(0, 1600), style: "clearly and naturally, like a friendly teacher" }) });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `Voice failed with HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      setType(blob.type);
+      setUrl(URL.createObjectURL(blob));
+    } catch (e) {
+      setErr(errorText(e));
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="dk-item">
+      <div className="dk-label">Hear your script</div>
+      <p>AI reads the script aloud so you can check how it sounds. It is a practice reference, not your recording.</p>
+      <button type="button" className="dk-btn" disabled={busy || text.trim().length < 2} onClick={() => void run()}>{busy ? <Spinner /> : null}Hear it read aloud</button>
+      {url && <audio controls src={url} style={{ width: "100%", marginTop: 10 }} data-type={type} />}
+      {err && <p className="dk-err" role="alert">{err}</p>}
+    </div>
+  );
+}
