@@ -13,7 +13,7 @@ import {
   ScriptScreen,
 } from "@/components/creator/workflow";
 import "@/landing.css";
-import { useAuth, signOut, displayName } from "@/hooks/use-auth";
+import { useAuth, signOut, displayName, shortName } from "@/hooks/use-auth";
 import { GoogleButton } from "@/components/creator/google-button";
 import type { StudioShared } from "@/lib/creator-shared";
 
@@ -881,7 +881,7 @@ function AppFrame({ s, go }: { s: Screen; go: (s: Screen) => void }) {
               aria-label={user ? "Account: " + displayName(user) : "Sign in"}
               style={{ width: "auto", padding: "0 12px", borderRadius: 999, fontSize: 12.5 }}
             >
-              {user ? displayName(user).split(" ")[0] : "Sign in"}
+              {user ? shortName(user) : "Sign in"}
             </button>
           </div>
         )}
@@ -1388,7 +1388,7 @@ function Account({ st, go }: { st: Shared; go: (s: Screen) => void }) {
         {user ? (
           <>
             <span>
-              Signed in with Google as <b>{displayName(user)}</b>
+              Signed in as <b>{displayName(user)}</b>
               {user.email && user.email !== displayName(user) ? " (" + user.email + ")" : ""}
             </span>
             <span className="sp" />

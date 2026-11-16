@@ -35,3 +35,11 @@ export function displayName(user: User): string {
   const m = user.user_metadata as Record<string, unknown> | undefined;
   return (typeof m?.["full_name"] === "string" && m["full_name"]) || user.email || "Signed in";
 }
+
+/** Short label for the header pill: first name, or the part of the email before @. */
+export function shortName(user: User): string {
+  const m = user.user_metadata as Record<string, unknown> | undefined;
+  const full = typeof m?.["full_name"] === "string" ? m["full_name"] : "";
+  const base = full.split(" ")[0] || (user.email ?? "Account").split("@")[0] || "Account";
+  return base.length > 14 ? base.slice(0, 13) + "…" : base;
+}

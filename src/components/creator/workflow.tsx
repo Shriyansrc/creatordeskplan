@@ -326,7 +326,8 @@ export function ConnectionsPanel() {
   const ready = services.state === "ready" ? services : null;
   const rows = [
     ["AI provider: research, plans, scripts, platform advice, captions and prompt edits", connection.state === "connected" ? "Connected" : connection.state === "checking" ? "Checking" : "Not connected", connection.state === "connected" ? "Built-in Lovable AI (or your own key, if set)." : "Built-in AI is unavailable right now."],
-    ["Accounts, Google sign-in and synced plans", "Not connected", "A backend is not enabled. Plans stay on this device."],
+    ["Google sign-in", "Connected", "Optional. Sign in from the top of this screen."],
+    ["Synced plans across devices", "Not connected", "Plans stay in this browser for now, even when signed in."],
     ...ALL_PLATFORMS.map((platform) => [`Direct posting to ${PLATFORM_NAMES[platform]}`, "Not connected", "Platform developer apps, account authorization and approvals are required."]),
     ["Reference search (YouTube) and live research data", svc(ready?.references), ready?.references ? "YOUTUBE_API_KEY is present on the server." : "Owner must set YOUTUBE_API_KEY on the server. Instagram and X links can still be entered by you."],
     ["Voice generation", svc(ready?.voice), ready?.voice ? "Provider account answered the status check. Billed by the provider." : "Owner must set VOICE_PROVIDER and VOICE_API_KEY on the server, and the provider must answer a status check."],

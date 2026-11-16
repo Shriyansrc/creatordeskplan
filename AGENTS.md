@@ -35,4 +35,5 @@ use the editor.
 - Browser media editing and export live in `src/lib/editor/` and lazy-load FFmpeg/Whisper only after user action, because the Cloudflare Worker must not bundle or execute browser media engines.
 - Session `File`/`Blob` objects use the in-memory editor store while durable planning and edit decisions use the `cd:` storage prefix, because binary media must not be written to localStorage.
 - Generation and retrieval providers (YouTube, voice, video) are reached only through `/api/ai/*` server routes with zod-validated responses, and media jobs are stateless provider-id polling, because Workers keep no job memory between requests.
-- Reel jobs go through the `ReelJobService` interface in `src/lib/reel-jobs/` (local fallback, remote when a backend exists), because the backend is intentionally not enabled yet.
+- Reel jobs go through the `ReelJobService` interface in `src/lib/reel-jobs/` (local fallback, remote when a backend exists), so syncing can be added without changing callers.
+- Sign-in is optional Google auth via `src/hooks/use-auth.ts` (Lovable Cloud broker); no route is gated, because the studio must keep working signed out.
