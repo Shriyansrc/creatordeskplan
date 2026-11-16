@@ -297,5 +297,40 @@ export const nichesSchema = z.object({
 });
 export type NichesResult = z.infer<typeof nichesSchema>;
 
-export const AI_TASKS = ["research", "plan", "script", "platforms", "edit", "captions", "niches"] as const;
+export const goalInputSchema = z.object({
+  answers: z.array(z.object({ question: z.string().max(300), answer: z.string().max(500) })).min(1).max(6),
+});
+export const goalSchema = z.object({
+  goals: z.array(z.object({ goal: z.string().min(1).max(200), why: z.string().min(1).max(400) })).min(2).max(3),
+});
+export type GoalResult = z.infer<typeof goalSchema>;
+
+export const topicsInputSchema = z.object({
+  goal: z.string().trim().max(300).optional(),
+  answers: z.array(z.object({ question: z.string().max(300), answer: z.string().max(500) })).min(1).max(6),
+});
+export const topicsSchema = z.object({
+  topics: z.array(z.object({ title: z.string().min(1).max(200), why: z.string().min(1).max(400) })).min(3).max(6),
+});
+export type TopicsResult = z.infer<typeof topicsSchema>;
+
+export const audienceInputSchema = z.object({
+  topic: z.string().trim().min(2).max(300),
+  goal: z.string().trim().min(2).max(300),
+});
+export const audienceSchema = z.object({
+  audiences: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        why: z.string().min(1).max(500),
+        painPoints: z.array(z.object({ title: z.string().min(1).max(200), detail: z.string().max(500) })).min(2).max(5),
+      }),
+    )
+    .min(3)
+    .max(5),
+});
+export type AudienceResult = z.infer<typeof audienceSchema>;
+
+export const AI_TASKS = ["research", "plan", "script", "platforms", "edit", "captions", "niches", "goal", "topics", "audience"] as const;
 export type AITask = (typeof AI_TASKS)[number];
