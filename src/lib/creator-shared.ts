@@ -30,6 +30,11 @@ export const DEFAULT_NICHES = [
   { t: "School tools you did not know existed", fit: "Shows the product in use every video." },
 ];
 
+/** Label for the chosen niche, falling back to the topic. */
+export function nicheLabel(st: Pick<StudioShared, "niche" | "topic">): string {
+  return DEFAULT_NICHES[st.niche]?.t ?? st.topic;
+}
+
 export const SCRIPT_SECTIONS = [
   ["hook", "Hook"],
   ["problem", "Problem"],

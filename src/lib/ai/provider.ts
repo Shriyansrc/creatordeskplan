@@ -15,6 +15,7 @@ const TASK_RULES: Record<AITask, string> = {
   script: "Return hook,problem,solution,cta,hashtags,seoPhrase,options. Write problem before solution, a strong hook, and an actionable CTA. Use the main pain point and SEO phrase naturally. Hashtags begin with # and contain no spaces. options contains hook, problem, solution and cta, each with genuinely different a and b alternatives. Honor instruction when supplied, otherwise create a fresh script.",
   platforms: "Return recommendations[{platform,reason}] using only ig, yt, li and x. Recommend only platforms that fit the stated goals and topic. Each reason is one concise sentence.",
   edit: "Return summary and operations. Use only these operation types: trim, split, delete, reorder, speed, volume, crop, color, removeSilence, captions, textOverlay, zoom. Use only clip ids from the supplied timeline. Ratios only 9:16, 1:1, 4:5, 16:9. Color values are percentages with 100 unchanged; volume is 0 to 1; speed is 0.25 to 4. Do not output code, URLs, file paths, or unknown operations. Make the smallest operation list that performs the prompt.",
+  niches: "Return niches[{title,fit}] with 3 to 6 specific content niches for the supplied topic, audience and goal. Each fit is one concise sentence explaining why it suits them.",
   captions: "Return captions[{platform,text}], one for every requested platform. Platform values only ig, yt, li, x. Adapt length and tone per platform from the supplied script; do not add claims or hashtags not supported by it.",
 };
 
