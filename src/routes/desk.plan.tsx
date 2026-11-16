@@ -4,6 +4,9 @@ import { Spinner } from "@/desk/ui";
 import { patchDesk, useDesk } from "@/desk/store";
 import { errorText, runPlan, runResearch, runScript } from "@/desk/api";
 import type { Platform, PlanTopic } from "@/lib/ai/contracts";
+import { ReferenceAnalysis, StylePanel, styleNotesOf } from "@/desk/extras";
+import { usePersistentState } from "@/lib/use-persistent-state";
+import type { StyleResult } from "@/lib/ai/contracts";
 import { ReferencePanel } from "@/components/creator/reference-panel";
 import type { StudioShared } from "@/lib/creator-shared";
 
@@ -27,6 +30,7 @@ function Plan() {
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   const [sel, setSel] = useState<string>("");
+  const [myStyle] = usePersistentState<StyleResult | null>("style", null);
   const niche = d.niche?.title ?? "";
   const base = { topic: p.topic, goal: p.goal, niche, platforms: p.platforms };
   const key = JSON.stringify(base);
@@ -62,7 +66,7 @@ function Plan() {
   const script = topic ? d.scripts[topic.id] : undefined;
   const doScript = (instruction?: string) => run("script", async () => {
     if (!topic) return;
-    const r = await runScript({ topic: topic.title, niche, goal: p.goal, platform: topic.platform, painPoint: topic.painPoint, researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
+    const r = await runScript({ topic: topic.title, niche, goal: p.goal, platform: topic.platform, painPoint: topic.painPoint, researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
     patchDesk({ scripts: { ...d.scripts, [topic.id]: { data: r, at: new Date().toISOString() } } });
   });
 
@@ -158,6 +162,10 @@ function Plan() {
                 <Link to="/desk/create" className="dk-btn">Next: record or create</Link>
               </div>
             )}
+            <h2 style={{ margin: "28px 0 6px" }}>My style</h2>
+            <StylePanel />
+            <h2 style={{ margin: "28px 0 6px" }}>Analyse a reference</h2>
+            <ReferenceAnalysis topic={topic.title} niche={niche} />
             <h2 style={{ margin: "28px 0 6px" }}>Reference videos</h2>
             <p style={{ marginBottom: 12 }}>Search real videos on this idea or paste an Instagram or X link with the numbers you see. Nothing is fetched from those links.</p>
             <ReferencePanel st={{ topic: topic.title, goal: p.goal, niche: 99, day: topic.day } as unknown as StudioShared} pains={p.painPoints.map((x) => [x])} />
