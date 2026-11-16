@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Platform } from "@/lib/ai/contracts";
 import { ALL_PLATFORMS } from "@/lib/creator-shared";
 import { SetupFrame, PlatLogo, Spinner } from "@/desk/ui";
-import { CAMERA, GOALS, LANGUAGES, PLATFORM_COPY, TOOLS, hoursLabel, patchDesk, patchProfile, useDesk } from "@/desk/store";
+import { CAMERA, GOALS, LANGUAGES, PLATFORM_COPY, TOOLS, getDesk, hoursLabel, patchDesk, patchProfile, useDesk } from "@/desk/store";
 import { errorText, suggestAudiences, suggestGoals, suggestPlatforms, suggestTopics } from "@/desk/api";
 
 export const Route = createFileRoute("/setup")({
@@ -273,7 +273,7 @@ function PlatformStep() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const toggle = (id: Platform) =>
-    patchProfile({ aiPlatforms: false, platformReasons: [], platforms: p.platforms.includes(id) ? p.platforms.filter((x) => x !== id) : [...p.platforms, id] });
+    patchProfile({ aiPlatforms: false, platformReasons: [], platforms: getDesk().profile.platforms.includes(id) ? getDesk().profile.platforms.filter((x) => x !== id) : [...getDesk().profile.platforms, id] });
   const decide = async () => {
     setBusy(true);
     setErr("");
