@@ -332,7 +332,7 @@ export function ConnectionsPanel() {
     ["Reference search (YouTube) and live research data", svc(ready?.references), ready?.references ? "YOUTUBE_API_KEY is present on the server." : "Owner must set YOUTUBE_API_KEY on the server. Instagram and X links can still be entered by you."],
     ["Voice generation", svc(ready?.voice), ready?.voice ? "Provider account answered the status check. Billed by the provider." : "Owner must set VOICE_PROVIDER and VOICE_API_KEY on the server, and the provider must answer a status check."],
     ["Video generation", svc(ready?.video), ready?.video ? "Provider account answered the status check. Billed by the provider." : "Owner must set VIDEO_PROVIDER and VIDEO_API_KEY on the server, and the provider must answer a status check."],
-    ["Motion reel service", "Not connected", "Needs accounts, a database and storage, which are not enabled. Reel jobs are saved on this device only."],
+    ["Motion reel service", "Not connected", "The reel service is not set up yet. Reel jobs are saved on this device only."],
     ["Live trend and analytics data", "Not connected", "No data source is configured. AI ranking is Estimated, not live data."],
   ];
   return <div style={{ marginBottom: 20 }}><div className="lab">Connections</div><div className="stack">{rows.map(([name, status, reason]) => <div className="card row" key={name}><div style={{ flex: 1 }}><b>{name}</b><div style={{ fontSize: 13 }}>{reason}</div></div><span className={"tg " + (status === "Connected" ? "r" : "n")}>{status}</span></div>)}</div></div>;
