@@ -134,7 +134,7 @@ function GoalStep() {
       <div className="dk-g3">
         <Pick sel={p.goal === GOALS[0]} onClick={() => patchProfile({ goal: GOALS[0] })} title="Grow my business" text="Help the right people understand what I offer and trust it." mini="Examples: explainers, proof, behind the scenes" />
         <Pick sel={p.goal === GOALS[1]} onClick={() => patchProfile({ goal: GOALS[1] })} title="Build my personal brand" text="Share what I know. Become known for it." mini="Examples: lessons, stories, useful tips" />
-        <Pick sel={help} onClick={() => setHelp(!help)} title="Help me decide" text="Answer three quick questions and we suggest a goal, with reasons." mini="You always make the final call" />
+        <Pick sel={help} onClick={() => { if (!help) patchProfile({ goal: "" }); setHelp(!help); }} title="Help me decide" text="Answer three quick questions and we suggest a goal, with reasons." mini="You always make the final call" />
       </div>
       {help && (
         <Questions
