@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ALL_PLATFORMS, PLATFORM_NAMES, SAMPLE_SCRIPT, type StudioShared, selectedPlatforms } from "@/lib/creator-shared";
+import { ALL_PLATFORMS, PLATFORM_NAMES, type StudioShared, selectedPlatforms } from "@/lib/creator-shared";
 import type { Platform } from "@/lib/ai/contracts";
 import { getSessionExport } from "@/lib/editor/session-store";
 import { usePersistentState } from "@/lib/use-persistent-state";
@@ -17,7 +17,7 @@ export function ReelJobButton({ st }: { st: StudioShared }) {
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
   const [saved, setSaved] = useState<ReelJob | null>(null);
-  useEffect(() => { if (open && !text) setText(["hook", "problem", "solution", "cta"].map((key) => script[key] ?? SAMPLE_SCRIPT[key as "hook"]).join("\n\n")); }, [open, script, text]);
+  useEffect(() => { if (open && !text) setText(["hook", "problem", "solution", "cta"].map((key) => script[key] ?? "").filter(Boolean).join("\n\n")); }, [open, script, text]);
   const exported = typeof window === "undefined" ? null : getSessionExport();
   const submit = async () => {
     setMessage(""); setSaved(null);
