@@ -13,11 +13,14 @@ export const Route = createFileRoute("/api/ai/research")({
         const settings = settingsFromEnv(process.env);
         const youtubeKey = process.env["YOUTUBE_API_KEY"];
         if (!providerIsConfigured(settings)) return Response.json({ connected: false, reason: "AI provider not configured" }, { status: 503 });
-        if (!youtubeKey?.trim()) return Response.json({ connected: false, reason: RESEARCH_NO_SOURCE }, { status: 503 });
         let input;
         try { input = researchInputSchema.parse(await request.json()); }
         catch { return Response.json({ connected: true, error: "Invalid research request" }, { status: 400 }); }
         try {
+          if (!youtubeKey?.trim()) {
+            const estimate = { ...input, rule: "No live data source is connected. Everything is an estimate from general knowledge: give trend as a cautious word, never invent numbers, view counts, channels or URLs." };
+            return Response.json({ connected: true, data: await generateValidated(settings, "research", estimate, researchSchema) });
+          }
           const live = await searchYouTube(youtubeKey, { idea: input.topic, niche: input.niche, audience: input.audienceNotes ?? "", platform: "yt", count: 15 });
           if (!live.videos.length) return Response.json({ connected: true, error: "YouTube returned no videos for this topic, so there is no data to research from." }, { status: 502 });
           const grounded = { ...input, liveYouTubeResults: live.videos.map((video) => ({ title: video.title, channel: video.channel, views: video.viewCount, publishedAt: video.publishedAt })), rule: "Derive keywords and trend notes only from liveYouTubeResults. The trend field must cite what those results show (for example how many titles use the phrase), never invented growth figures." };
