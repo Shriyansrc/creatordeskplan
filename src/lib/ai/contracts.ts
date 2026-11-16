@@ -95,6 +95,7 @@ export const scriptInputSchema = z.object({
   researchKeywords: z.array(z.string().max(300)).max(20),
   current: z.record(z.string(), z.string().max(10000)).optional(),
   instruction: z.string().max(2000).optional(),
+  styleNotes: z.string().max(2000).optional(),
 });
 export type ScriptInput = z.infer<typeof scriptInputSchema>;
 
@@ -332,5 +333,38 @@ export const audienceSchema = z.object({
 });
 export type AudienceResult = z.infer<typeof audienceSchema>;
 
-export const AI_TASKS = ["research", "plan", "script", "platforms", "edit", "captions", "niches", "goal", "topics", "audience"] as const;
+export const AI_TASKS = ["research", "plan", "script", "platforms", "edit", "captions", "niches", "goal", "topics", "audience", "reference", "style"] as const;
 export type AITask = (typeof AI_TASKS)[number];
+
+export const referenceInputSchema = z.object({
+  platform: z.enum(["yt", "ig", "x"]),
+  link: z.string().trim().max(500),
+  views: z.string().max(40).optional(),
+  likes: z.string().max(40).optional(),
+  pasted: z.string().trim().min(20).max(6000),
+  topic: z.string().trim().min(2).max(300),
+  niche: z.string().max(300).optional(),
+});
+export const referenceSchema = z.object({
+  summary: z.string().min(1).max(600),
+  hookPattern: z.string().min(1).max(500),
+  structure: z.array(z.object({ beat: z.string().min(1).max(80), detail: z.string().min(1).max(400) })).min(2).max(8),
+  whyItWorks: z.array(z.string().min(1).max(400)).min(2).max(5),
+  adaptForMe: z.array(z.string().min(1).max(400)).min(2).max(5),
+  avoid: z.array(z.string().min(1).max(300)).max(4),
+});
+export type ReferenceResult = z.infer<typeof referenceSchema>;
+
+export const styleInputSchema = z.object({
+  samples: z.string().trim().min(40).max(6000),
+  description: z.string().max(600).optional(),
+});
+export const styleSchema = z.object({
+  name: z.string().min(1).max(60),
+  tone: z.string().min(1).max(300),
+  sentenceRules: z.array(z.string().min(1).max(300)).min(2).max(6),
+  vocabulary: z.array(z.string().min(1).max(60)).max(12),
+  avoid: z.array(z.string().min(1).max(200)).max(6),
+  sampleLine: z.string().min(1).max(300),
+});
+export type StyleResult = z.infer<typeof styleSchema>;
