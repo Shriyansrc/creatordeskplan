@@ -4,7 +4,7 @@ import { Spinner } from "@/desk/ui";
 import { patchDesk, useDesk } from "@/desk/store";
 import { errorText, runPlan, runResearch, runScript } from "@/desk/api";
 import type { Platform, PlanTopic } from "@/lib/ai/contracts";
-import { ReferenceAnalysis, StylePanel, styleNotesOf } from "@/desk/extras";
+import { ListenButton, ReferenceAnalysis, StylePanel, styleNotesOf } from "@/desk/extras";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import type { StyleResult } from "@/lib/ai/contracts";
 import { ReferencePanel } from "@/components/creator/reference-panel";
@@ -159,6 +159,7 @@ function Plan() {
                   </label>
                 ))}
                 <div className="dk-item"><div className="dk-label">Hashtags</div><p>{script.data.hashtags.join(" ")}</p><p style={{ marginTop: 6 }}>Search phrase: {script.data.seoPhrase}</p></div>
+                <ListenButton text={[script.data.hook, script.data.problem, script.data.solution, script.data.cta].join(" ")} />
                 <Link to="/desk/create" className="dk-btn">Next: record or create</Link>
               </div>
             )}
