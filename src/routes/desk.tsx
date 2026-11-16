@@ -13,6 +13,7 @@ function DeskLayout() {
   const nav = useNavigate();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  useEffect(() => { if (window.location.hostname.startsWith("id-preview")) document.documentElement.classList.add("is-preview"); }, []);
   useEffect(() => {
     if (mounted && !desk.profile.setupDone) void nav({ to: "/setup", search: { step: 1 }, replace: true });
   }, [mounted, desk.profile.setupDone, nav]);
