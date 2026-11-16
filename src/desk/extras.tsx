@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getDesk } from "@/desk/store";
+import { applyRemote, fetchRemote, lastSyncedAt, pushLocal, type Remote } from "@/desk/sync";
 import { Spinner } from "@/desk/ui";
 import { analyseReference, errorText, learnStyle } from "@/desk/api";
 import { usePersistentState } from "@/lib/use-persistent-state";
@@ -128,6 +130,48 @@ export function ListenButton({ text }: { text: string }) {
       <button type="button" className="dk-btn" disabled={busy || text.trim().length < 2} onClick={() => void run()}>{busy ? <Spinner /> : null}Hear it read aloud</button>
       {url && <audio controls src={url} style={{ width: "100%", marginTop: 10 }} data-type={type} />}
       {err && <p className="dk-err" role="alert">{err}</p>}
+    </div>
+  );
+}
+
+export function SyncPanel({ userId }: { userId: string }) {
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [remote, setRemote] = useState<Remote | undefined>(undefined);
+  const refresh = async () => {
+    const { remote: r, error } = await fetchRemote(userId);
+    if (error) setMsg(`Could not reach your saved copy: ${error}`);
+    else setRemote(r);
+  };
+  useEffect(() => { void refresh(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+  const synced = lastSyncedAt();
+  const remoteNewer = !!remote && (!synced || remote.updated_at > synced);
+  const save = async () => {
+    if (remoteNewer && !window.confirm("Your account has a newer saved copy than this browser last saw. Saving will replace it. Continue?")) return;
+    setBusy(true);
+    const e = await pushLocal(userId);
+    setMsg(e ? `Not saved: ${e}` : "Saved to your account.");
+    await refresh();
+    setBusy(false);
+  };
+  const load = () => {
+    if (!remote) return;
+    if (getDesk().profile.setupDone && !window.confirm("This replaces the plans and style saved in this browser with the copy from your account. Continue?")) return;
+    const e = applyRemote(remote);
+    setMsg(e ?? "Loaded from your account.");
+  };
+  return (
+    <div style={{ marginTop: 14 }}>
+      <p style={{ fontSize: 15 }}>
+        {remote === undefined ? "Checking your saved copy..." : remote ? `Saved copy on your account: ${new Date(remote.updated_at).toLocaleString()}.` : "Nothing saved to your account yet."}
+      </p>
+      <div className="dk-row" style={{ flexWrap: "wrap", marginTop: 8 }}>
+        <button type="button" className="dk-btn" disabled={busy || !getDesk().profile.setupDone} onClick={() => void save()}>Save my plans to my account</button>
+        <button type="button" className="dk-btn secondary" disabled={busy || !remote} onClick={load}>Load from my account</button>
+      </div>
+      <p style={{ fontSize: 13, marginTop: 8 }}>Only your answers, plans, scripts and style are stored, in a private row only you can read. Videos stay on your device.</p>
+      {msg && <p role="status" style={{ fontSize: 14, marginTop: 6 }}>{msg}</p>}
     </div>
   );
 }
