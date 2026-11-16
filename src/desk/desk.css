@@ -110,3 +110,8 @@ textarea.dk-field{resize:vertical;min-height:110px}
 .dk-btn{font-family:inherit}
 .old-ed,.old-ed *{font-family:DM,system-ui,sans-serif}
 .old-ed h1,.old-ed h2{font-family:King,system-ui,sans-serif;font-weight:400;color:var(--ink)}
+.old-ed .phone:has(.editor-empty){background:#f6f8fb!important;border:2px dashed #b9c6d8;color:var(--ink)!important;min-height:280px;aspect-ratio:auto!important;width:100%;max-width:560px}
+.old-ed .editor-empty,.old-ed .editor-empty b{color:var(--ink)!important}
+.old-ed .editor-empty p{color:#4a5668!important;font-size:15px}
+.old-ed .sub{color:#4a5668;font-size:18px}
+.old-ed h1{font-size:clamp(34px,6vw,54px)!important;line-height:1.05;margin:0 0 8px}

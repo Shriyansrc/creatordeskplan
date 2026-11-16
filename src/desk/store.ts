@@ -25,6 +25,7 @@ export type DeskState = {
   research: { key: string; data: ResearchResult; at: string } | null;
   plan: { key: string; data: PlanResult; at: string } | null;
   scripts: Record<string, { data: ScriptResult; at: string }>;
+  results: { id: string; title: string; platform: Platform; views: number; saves: number; shares: number; at: string }[];
 };
 
 export const EMPTY_PROFILE: Profile = {
@@ -43,7 +44,7 @@ export const EMPTY_PROFILE: Profile = {
   setupDone: false,
 };
 
-const EMPTY: DeskState = { profile: EMPTY_PROFILE, audienceSuggestions: null, niches: null, niche: null, research: null, plan: null, scripts: {} };
+const EMPTY: DeskState = { profile: EMPTY_PROFILE, audienceSuggestions: null, niches: null, niche: null, research: null, plan: null, scripts: {}, results: [] };
 const KEY = "creatordesk.v2";
 let state: DeskState = EMPTY;
 let loaded = false;
@@ -56,7 +57,7 @@ function load() {
     const raw = window.localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<DeskState>;
-      state = { ...EMPTY, ...parsed, profile: { ...EMPTY_PROFILE, ...(parsed.profile ?? {}) }, scripts: parsed.scripts ?? {} };
+      state = { ...EMPTY, ...parsed, profile: { ...EMPTY_PROFILE, ...(parsed.profile ?? {}) }, scripts: parsed.scripts ?? {}, results: parsed.results ?? [] };
     }
   } catch {
     state = EMPTY;
