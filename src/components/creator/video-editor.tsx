@@ -441,7 +441,6 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
             setProject((current) => applyOperations(current, [{ type: "crop", clipId: selected.id, ratio: current.ratio, x, y }]));
           }} onPointerUp={() => { dragRef.current = null; }}>
             {activeClip && activeAsset ? <><video className="editor-source" key={activeClip.id} ref={videoRef} src={activeAsset.url} playsInline preload="auto" onClick={togglePlayback} /><canvas className="editor-render" ref={canvasRef} width={DIMENSIONS[view.ratio][0]} height={DIMENSIONS[view.ratio][1]} aria-label="Edited video preview" /></> : <div className="editor-empty"><b>No video yet</b><p>Choose a video to edit.</p></div>}
-            {activeClip && activeAsset && <button className="editor-play" aria-label={playing ? "Pause preview" : "Play preview with audio"} onPointerDown={event => event.stopPropagation()} onClick={togglePlayback} disabled={Boolean(busy) || exporting}>{playing ? "Pause" : "Play"}</button>}
             {st.tool === "Crop" && selected && <span className="crop-handle" aria-label="Drag to reframe" />}
           </div>
           <div className="eratio">{RATIOS.map((ratio) => <button key={ratio} className={"chip" + (view.ratio === ratio ? " on" : "")} onClick={() => commitOperations([{ type: "crop", ratio }])}>{ratio}</button>)}<span className="sp" /><span style={{ fontSize: 12 }}>{formatTime(playhead)} / {formatTime(totalDuration)}</span></div>
