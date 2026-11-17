@@ -30,7 +30,7 @@ function Setup() {
   const { profile: p } = useDesk();
 
   const valid: Record<number, boolean> = {
-    1: p.goal.trim().length > 1,
+    1: p.goal.trim().length > 1 && (p.purpose ?? "").trim().length > 2,
     2: p.topic.trim().length > 2,
     3: (p.audience.trim() || p.audienceNotes.trim()).length > 1,
     4: p.platforms.length > 0,
@@ -130,12 +130,13 @@ function GoalStep() {
   const [options, setOptions] = useState<{ goal: string; why: string }[]>([]);
   return (
     <>
-      <Head no="01 / Your goal" title="What should your videos do?" intro="This steers your topics, your scripts and where we suggest posting." />
+      <Head no="01 / Your goal" title="Why are you pursuing social media?" intro="Pick your main direction and explain the result you want. Your calendar will mix useful posts, proof and promotion around that goal." />
       <div className="dk-g3">
         <Pick sel={p.goal === GOALS[0]} onClick={() => patchProfile({ goal: GOALS[0] })} title="Grow my business" text="Help the right people understand what I offer and trust it." mini="Examples: explainers, proof, behind the scenes" />
         <Pick sel={p.goal === GOALS[1]} onClick={() => patchProfile({ goal: GOALS[1] })} title="Build my personal brand" text="Share what I know. Become known for it." mini="Examples: lessons, stories, useful tips" />
         <Pick sel={help} onClick={() => { if (!help) patchProfile({ goal: "" }); setHelp(!help); }} title="Help me decide" text="Answer three quick questions and we suggest a goal, with reasons." mini="You always make the final call" />
       </div>
+      <label style={{ display: "block", marginTop: 20 }}><div className="dk-label">Why are you pursuing social media?</div><textarea className="dk-field" rows={3} maxLength={200} value={p.purpose ?? ""} onChange={(e) => patchProfile({ purpose: e.target.value })} placeholder="For example: I sell websites and want local business owners to enquire about my services." /><p style={{ fontSize: 13, marginTop: 6 }}>Tell us what you offer, who it helps and what you want to happen. This is saved with your profile.</p></label>
       {help && (
         <Questions
           qs={GOAL_QS}
