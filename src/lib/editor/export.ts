@@ -1,3 +1,4 @@
+import { drawMotion, motionError } from "./motion-scenes";
 import { renderOffline } from "./offline-export";
 import { needsSubjectMasks, subjectBeatError, subjectModeAt } from "./subject-beats";
 import { drawSubject, subjectMasksReady } from "./subject-mask";
@@ -125,6 +126,7 @@ export function drawFrame(
       styled.letterSpacing = "0px";
     }
   }
+  drawMotion(context, canvas, video, project, timelineTime);
   context.restore();
 }
 
@@ -165,6 +167,8 @@ export async function exportProject(
   format: "webm" | "mp4",
   onProgress: (value: number, label: string) => void,
 ) {
+  const sceneError = motionError(project);
+  if (sceneError) throw new Error(sceneError);
   const beatError = subjectBeatError(project);
   if (beatError) throw new Error(beatError);
   if(needsSubjectMasks(project) && !subjectMasksReady(project))throw new Error('Prepare subject masks for the full edit before exporting, or choose Original footage.');
@@ -179,4 +183,4 @@ export async function exportProject(
   const blob = format === "mp4" ? await convertToMp4(webm, onProgress) : webm;
   onProgress(1, "Export ready");
   return blob;
-                           }
+}
