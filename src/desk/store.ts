@@ -13,7 +13,7 @@ export type Profile = {
   platformReasons: { platform: Platform; reason: string }[];
   hours: number;
   tools: string[];
-  camera: string;
+  cameras: string[];
   language: string;
   setupDone: boolean;
 };
@@ -22,7 +22,7 @@ export type DeskState = {
   profile: Profile;
   audienceSuggestions: { key: string; items: AudienceResult["audiences"] } | null;
   niches: { key: string; items: NichesResult["niches"] } | null;
-  niche: { title: string; fit: string } | null;
+  pickedNiches: { title: string; fit: string }[];
   research: { key: string; data: ResearchResult; at: string } | null;
   plan: { key: string; data: PlanResult; at: string; startDate?: string } | null;
   scripts: Record<string, { data: ScriptResult; at: string }>;
@@ -41,12 +41,12 @@ export const EMPTY_PROFILE: Profile = {
   platformReasons: [],
   hours: 0,
   tools: [],
-  camera: "",
+  cameras: [],
   language: "",
   setupDone: false,
 };
 
-const EMPTY: DeskState = { profile: EMPTY_PROFILE, audienceSuggestions: null, niches: null, niche: null, research: null, plan: null, scripts: {}, results: [] };
+const EMPTY: DeskState = { profile: EMPTY_PROFILE, audienceSuggestions: null, niches: null, pickedNiches: [], research: null, plan: null, scripts: {}, results: [] };
 const KEY = "creatordesk.v2";
 let state: DeskState = EMPTY;
 let loaded = false;
@@ -58,8 +58,11 @@ function load() {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<DeskState>;
-      state = { ...EMPTY, ...parsed, profile: { ...EMPTY_PROFILE, ...(parsed.profile ?? {}) }, scripts: parsed.scripts ?? {}, results: parsed.results ?? [] };
+      const parsed = JSON.parse(raw) as Partial<DeskState> & { niche?: { title: string; fit: string } | null };
+      const legacyProfile = (parsed.profile ?? {}) as Partial<Profile> & { camera?: string };
+      const cameras = Array.isArray(legacyProfile.cameras) ? legacyProfile.cameras : legacyProfile.camera ? [legacyProfile.camera] : [];
+      const pickedNiches = Array.isArray(parsed.pickedNiches) ? parsed.pickedNiches : parsed.niche ? [parsed.niche] : [];
+      state = { ...EMPTY, ...parsed, pickedNiches, profile: { ...EMPTY_PROFILE, ...legacyProfile, cameras }, scripts: parsed.scripts ?? {}, results: parsed.results ?? [] };
     }
   } catch {
     state = EMPTY;
@@ -122,4 +125,4 @@ export const PLATFORM_COPY: Record<Platform, { name: string; line: string }> = {
 export function hoursLabel(h: number) {
   if (h <= 0) return "";
   return h >= 10 ? "10+ hours a week" : `${h} hour${h === 1 ? "" : "s"} a week`;
-  }
+}
