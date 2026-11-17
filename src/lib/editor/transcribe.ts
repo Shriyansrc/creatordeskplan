@@ -16,7 +16,26 @@ export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgr
     },
   });
   onProgress(`Transcribing ${asset.name} in your browser…`);
-  const output = (await transcriber(asset.url, { return_timestamps: "word", chunk_length_s: 30, stride_length_s: 5, language: language === "hi" ? "hindi" : "english", task: "transcribe" })) as WhisperResult | WhisperResult[];
+  // Decode and resample explicitly instead of passing the URL to the pipeline:
+  // the library's own URL audio path produced unusable text on verified clear
+  // speech, while Web Audio decode of the same file is clean.
+  const response = await fetch(asset.url);
+  const encoded = await response.arrayBuffer();
+  const probe = new AudioContext();
+  let decoded: AudioBuffer;
+  try {
+    decoded = await probe.decodeAudioData(encoded);
+  } finally {
+    void probe.close();
+  }
+  const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * 16000)), 16000);
+  const source = offline.createBufferSource();
+  source.buffer = decoded;
+  source.connect(offline.destination);
+  source.start(0);
+  const rendered = await offline.startRendering();
+  const audio = rendered.getChannelData(0);
+  const output = (await transcriber(audio, { return_timestamps: "word", chunk_length_s: 30, stride_length_s: 5, language: language === "hi" ? "hindi" : "english", task: "transcribe" })) as WhisperResult | WhisperResult[];
   const result = Array.isArray(output) ? output[0] : output;
   const chunks = result?.chunks ?? [];
   return chunks.flatMap((chunk) => {
