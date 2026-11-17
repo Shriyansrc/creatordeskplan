@@ -6,7 +6,7 @@ import { settingsFromEnv } from "@/lib/ai/route-handler";
 import { gatherSources } from "@/lib/ai/sources";
 
 export const RESEARCH_NO_SOURCE = "Live research could not reach enough sources right now. Nothing was estimated. Try again in a minute.";
-const MIN_SOURCES = 4;
+const MIN_SOURCES = 2;
 
 export const Route = createFileRoute("/api/ai/research")({
   server: {

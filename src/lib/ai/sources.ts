@@ -34,7 +34,8 @@ async function suggest(q: string, yt: boolean): Promise<Raw[]> {
   }];
 }
 
-async function reddit(q: string): Promise<Raw[]> {
+// Reddit blocks server requests (HTTP 403), so it is not used.
+export async function reddit(q: string): Promise<Raw[]> {
   const j = rec(await getJson(`https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=relevance&t=year&limit=8&raw_json=1`));
   return arr(rec(j.data).children).map((c) => rec(rec(c).data)).filter((d) => d.title && d.permalink).slice(0, 6).map((d) => ({
     site: `Reddit r/${clean(d.subreddit, 40)}`,
@@ -73,9 +74,8 @@ export async function gatherSources(topic: string, niche: string): Promise<Sourc
   for (const q of terms) {
     jobs.push({ site: `YouTube suggestions: ${q}`, run: () => suggest(q, true) });
     jobs.push({ site: `Google suggestions: ${q}`, run: () => suggest(q, false) });
-    jobs.push({ site: `Reddit: ${q}`, run: () => reddit(q) });
-    for (const pre of ["how to ", "why ", "mistakes ", "best "]) {
-      const qq = pre === "mistakes " ? `${q} mistakes` : `${pre}${q}`;
+    for (const pre of ["how to ", "why ", "mistakes ", "best ", "what is ", "tips "]) {
+      const qq = pre === "mistakes " || pre === "tips " ? `${q} ${pre.trim()}` : `${pre}${q}`;
       jobs.push({ site: `YouTube questions: ${qq}`, run: () => suggest(qq, true) });
     }
     jobs.push({ site: `Wikipedia: ${q}`, run: () => wikipedia(q) });
