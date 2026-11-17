@@ -10,6 +10,7 @@ export const Route = createFileRoute("/api/ai/speech")({
     handlers: {
       POST: async ({ request }) => {
         if (!process.env["LOVABLE_API_KEY"]) return Response.json({ error: "AI is not connected" }, { status: 503 });
+        if (!/^Bearer\s+\S+$/i.test(request.headers.get("authorization") ?? "")) return Response.json({ error: "Sign in to use AI generation." }, { status: 401 });
         let input: z.infer<typeof inputSchema>;
         try {
           input = inputSchema.parse(await request.json());
