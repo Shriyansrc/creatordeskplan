@@ -1,13 +1,10 @@
 import { DEFAULT_WRAPPING } from "./wrapping";
 import { useState } from "react";
-import { DEFAULT_FISHEYE } from "./fisheye";
 import { planSfx, rememberMusic, hasMusic } from "./soundtrack";
 import type { EditorProject, TranscriptWord } from "./types";
 
-export function StyleControls({ project, transcript, change, lens }: { project: EditorProject; transcript: TranscriptWord[]; change: (project: EditorProject) => void; lens: string }) {
+export function StyleControls({ project, transcript, change }: { project: EditorProject; transcript: TranscriptWord[]; change: (project: EditorProject) => void }) {
   const [error, setError] = useState("");
-  const settings = project.fisheye ?? DEFAULT_FISHEYE;
-  const updateLens = (patch: Partial<typeof settings>) => change({ ...project, fisheye: { ...settings, ...patch } });
   const highlights = (enabled: boolean) => {
     const next = { ...project, keywordHighlights: enabled };
     change({ ...next, sfx: planSfx(next, transcript).events });
@@ -21,14 +18,6 @@ export function StyleControls({ project, transcript, change, lens }: { project: 
       {project.wrappingCaptions?.enabled && <section><p>Words build in speech-timed groups around this ellipse. This does not track the face. Adjust the centre to keep text away from eyes and mouth. Turn it off to return to Font captions.</p>{([['centreX','Subject centre horizontal',15,85],['centreY','Subject centre vertical',20,70],['radiusX','Horizontal distance',15,35],['radiusY','Vertical distance',10,30]] as const).map(([key,label,min,max])=><label className="lab" key={key}>{label}<input type="range" aria-label={label} min={min} max={max} value={project.wrappingCaptions?.[key] ?? DEFAULT_WRAPPING[key]} onChange={(event)=>change({...project,wrappingCaptions:{...DEFAULT_WRAPPING,...project.wrappingCaptions,[key]:Number(event.target.value)}})} /></label>)}</section>}
 
       <ul aria-label="SFX list">{(project.sfx ?? []).map((event) => <li key={event.id}>{event.kind === "cameraFlash" ? "camera flash" : event.kind} at {event.time.toFixed(2)}s, {event.duration.toFixed(2)}s. {event.reason}{!project.sfxEnabled ? " (off)" : ""}</li>)}</ul>
-    </section>
-    <section aria-label="Fisheye panel"><h2>Fisheye</h2>
-      <label className="row"><input type="checkbox" checked={settings.enabled} onChange={(event) => updateLens({ enabled: event.target.checked })} />Fisheye on</label>
-      <p>{lens || "Renderer checked when a clip is available"}</p>
-      {([ ["strength", "Strength", 0, 1], ["curvature", "Curvature", 0.5, 3], ["zoomCompensation", "Zoom Compensation", 0, 1], ["edgeDarken", "Edge Darken", 0, 0.6], ["lensShine", "Lens Shine", 0, 0.5] ] as const).map(([key,label,min,max]) => <label className="lab" key={key}>{label} {settings[key].toFixed(2)}<input aria-label={label} type="range" min={min} max={max} step={0.01} value={settings[key]} onChange={(event) => updateLens({ [key]: Number(event.target.value) })} /></label>)}
-      <label className="lab">Start time<input aria-label="Fisheye start time" className="field" type="number" min={0} max={settings.end - 0.1} step={0.1} value={settings.start} onChange={(event) => updateLens({ start: Math.max(0, Math.min(settings.end - 0.1, Number(event.target.value))) })} /></label>
-      <label className="lab">End time<input aria-label="Fisheye end time" className="field" type="number" min={settings.start + 0.1} step={0.1} value={settings.end} onChange={(event) => updateLens({ end: Math.max(settings.start + 0.1, Number(event.target.value)) })} /></label>
-      <label className="row"><input type="checkbox" checked={settings.grow} onChange={(event) => updateLens({ grow: event.target.checked })} />Grow</label>
     </section>
     <section aria-label="Background music"><h2>Background music</h2>
       <label className="btn s g">Add background music<input aria-label="Add background music" type="file" accept="audio/*" hidden onChange={async (event) => {
@@ -47,4 +36,4 @@ export function StyleControls({ project, transcript, change, lens }: { project: 
       {error && <p role="alert">{error}</p>}
     </section>
   </div>;
-      }
+}
