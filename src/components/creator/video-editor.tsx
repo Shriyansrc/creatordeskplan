@@ -135,6 +135,20 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     }
   }, [projectReady, setProject]);
 
+  // Clips saved from an earlier visit may have lost their files (files only live for the session).
+  // Never delete them, but do not let the preview sit on, or play through, a clip with no file.
+  useEffect(() => {
+    if (!view.clips.length || !assets.length || (activeClip && activeAsset)) return;
+    const playable = view.clips.filter((clip) => assets.some((asset) => asset.sourceId === clip.sourceId));
+    if (!playable.length) return;
+    const next = playable.find((clip) => clipStart(view, clip.id) >= playhead);
+    if (!next) setPlaying(false);
+    const target = next ?? playable[0]!;
+    seekAudioRef.current = true;
+    setPlayhead(clipStart(view, target.id));
+    setSelectedId(target.id);
+  }, [activeClip?.id, activeAsset, assets, view, playhead]);
+
   useEffect(() => {
     if (selectedId && view.clips.some((clip) => clip.id === selectedId)) return;
     setSelectedId(view.clips[0]?.id ?? "");
@@ -527,7 +541,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
             {connection.state === "not-connected" && <p className="note">{NOT_CONNECTED_COPY}</p>}
             <button className="btn" style={{ marginTop: 10 }} disabled={Boolean(busy) || !prompt.trim() || connection.state !== "connected"} onClick={previewPrompt}>Propose edit</button>
           </div>}
-          {st.tool === "Media" && <div><label className="btn g s">Import clips<input type="file" accept="video/*" multiple hidden onChange={(event) => void importFiles(Array.from(event.target.files ?? []))} /></label><p className="note">{project.clips.length} clips on the timeline. Session files stay on this device.</p></div>}
+          {st.tool === "Media" && <div><label className="btn g s">Import clips<input type="file" accept="video/*" multiple hidden onChange={(event) => void importFiles(Array.from(event.target.files ?? []))} /></label><p className="note">{project.clips.length} clips on the timeline.{(() => { const lost = project.clips.filter((clip) => !assets.some((asset) => asset.sourceId === clip.sourceId)).length; return lost ? ` ${lost} from earlier visits need their files again (they are kept, not deleted).` : ""; })()} Session files stay on this device.</p></div>}
           {st.tool === "Trim" && selected && <div className="stack"><div className="row"><button className="btn s g" onClick={() => activeClip && location && commitOperations([{ type: "split", clipId: activeClip.id, at: location.sourceTime }])}>Split at playhead</button><button className="btn s g" onClick={() => commitOperations([{ type: "delete", clipId: selected.id }])}>Delete clip</button></div><div className="row"><button className="btn s g" disabled={view.clips.indexOf(selected) <= 0} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) - 1 }])}>Move earlier</button><button className="btn s g" disabled={view.clips.indexOf(selected) >= view.clips.length - 1} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) + 1 }])}>Move later</button></div><label className="lab">Trim in, seconds<input key={`${selected.id}-in-${selected.trimIn}`} className="field" type="number" min={0} max={selected.trimOut - 0.05} step={0.1} defaultValue={selected.trimIn} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: Number(event.target.value), end: selected.trimOut }])} /></label><label className="lab">Trim out, seconds<input key={`${selected.id}-out-${selected.trimOut}`} className="field" type="number" min={selected.trimIn + 0.05} max={selected.sourceDuration} step={0.1} defaultValue={selected.trimOut} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: selected.trimIn, end: Number(event.target.value) }])} /></label><label className="lab">Speed: {selected.speed.toFixed(2)}x<input type="range" min={0.25} max={4} step={0.05} value={selected.speed} onChange={(event) => commitOperations([{ type: "speed", clipId: selected.id, value: Number(event.target.value) }])} /></label><button className="btn s g" onClick={previewSilence}>Preview silence removal</button></div>}
           {st.tool === "Captions" && <div>
             <label className="row"><input type="checkbox" checked={view.captionsEnabled} onChange={(event) => commitOperations([{ type: "captions", enabled: event.target.checked }])} /> Burn-in captions</label>
@@ -580,4 +594,5 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     </footer>
   </div>;
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+
 
