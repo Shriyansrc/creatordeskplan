@@ -48,17 +48,17 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
   return (
     <div className="panel" style={{ marginTop: 12 }}>
       <div className="row" style={{ marginBottom: 10 }}>
-        <div className="lab" style={{ margin: 0 }}>Find reference videos</div>
+        <div className="lab" style={{ margin: 0 }}>Find references</div>
         <span className="sp" />
         <span className="tg n">Built-in web search</span>
       </div>
       <label className="lab" htmlFor="ref-idea">Your idea</label>
       <input id="ref-idea" className="field" value={idea} onChange={(event) => setIdea(event.target.value)} />
       <p className="note" style={{ margin: "10px 0" }}>
-        Searches the web for real videos on your idea for each platform you post to: {platforms.map((p) => NAMES[p]).join(", ")}. No key and no pasted links. Each result is checked on its own platform. Results are not ranked by performance.
+        Searches selected platforms for YouTube videos and related LinkedIn posts: {platforms.map((p) => NAMES[p]).join(", ")}. No key or pasted links. LinkedIn video playback is not verified. Instagram and X discovery are unresolved. Results are not ranked by performance.
       </p>
       <button className="btn" disabled={busy || idea.trim().length < 2} onClick={() => void runAll()}>
-        {busy ? "Searching…" : platforms.some((p) => sections[p]?.done) ? "Search again" : "Find reference videos"}
+        {busy ? "Searching…" : platforms.some((p) => sections[p]?.done) ? "Search again" : "Find references"}
       </button>
       {platforms.map((p) => {
         const sec = sections[p];
@@ -107,9 +107,9 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
 }
 
 function RefCard({ v, saved, onSave }: { v: Found; saved: boolean; onSave: () => void }) {
-  const label = v.platform === "yt" ? "video" : "post";
+  const label = v.platform === "yt" ? "video" : "post (video not verified)";
   return (
-    <div className="card row" style={{ alignItems: "flex-start" }}>
+    <div className="card row" style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
       <a href={v.url} target="_blank" rel="noreferrer" aria-label={`Open this ${label} on ${NAMES[v.platform]}`}>
         {v.thumbnail ? (
           <img src={v.thumbnail} alt="" width={120} height={68} style={{ width: 120, height: 68, objectFit: "cover", borderRadius: 8 }} loading="lazy" referrerPolicy="no-referrer" />
@@ -122,7 +122,7 @@ function RefCard({ v, saved, onSave }: { v: Found; saved: boolean; onSave: () =>
         <div style={{ fontSize: 13 }}>
           {[v.author, v.views !== null ? `${v.views.toLocaleString()} views` : "views not available", v.likes !== null ? `${v.likes.toLocaleString()} likes` : ""].filter(Boolean).join(" · ")}
         </div>
-        <div className="note">{v.why ?? v.note}</div>
+        <div className="note">{v.platform !== "yt" ? "Post only. Video playback not verified. " : ""}{v.why ?? v.note}</div>
       </div>
       <button className="btn s g" onClick={onSave} aria-pressed={saved}>{saved ? "Remove from plan" : "Save to plan"}</button>
     </div>
