@@ -1,3 +1,4 @@
+import { guardGeneration } from "@/lib/references/quota.server";
 import { jobIdSchema, mapPredictionStatus, parseMediaProvider, predictionOutputUrl, predictionSchema, type JobStatus } from "./media-jobs";
 
 const API = "https://api.replicate.com/v1";
@@ -74,6 +75,8 @@ export function mediaJobHandlers(kind: "voice" | "video", buildInput: (body: unk
       let input: Record<string, unknown>;
       try { input = buildInput(await request.json()); } catch { return Response.json({ connected: true, error: "Invalid generation request" }, { status: 400 }); }
       try {
+        const denied = await guardGeneration(request);
+        if (denied) return denied;
         const prediction = await startPrediction(settings, input);
         return Response.json({ connected: true, data: toJobStatus(prediction, `/api/ai/${kind}?id=${prediction.id}&media=1`) });
       } catch (error) { return fail(error); }
