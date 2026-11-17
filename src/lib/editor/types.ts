@@ -57,6 +57,8 @@ export type EditorProject = {
   sfx?: SfxEvent[];
   fisheye?: FisheyeSettings;
   music?: MusicSettings;
+  motionScenes?: import("./motion-scenes").MotionScene[];
+  motionTimelineKey?: string;
   subjectBeats?: import("./subject-beats").SubjectBeat[];
   subjectMode?: "original" | "sticker" | "silhouette";
   wrappingCaptions?: { enabled: boolean; centreX: number; centreY: number; radiusX: number; radiusY: number };
