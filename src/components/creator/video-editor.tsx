@@ -69,7 +69,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const [dropOver, setDropOver] = useState(false);
   const [pending, setPending] = useState<PendingEdit | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [speechLang, setSpeechLang] = useState<"en" | "hi">("en");
+  const [speechLang, setSpeechLang] = useState<"en" | "hi" | "hinglish">("hinglish");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [playhead, setPlayhead] = useState(0);
@@ -142,7 +142,15 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     video.volume = activeClip.volume;
     video.muted = audioReady || activeClip.muted;
     video.currentTime = Math.min(location.sourceTime, Math.max(0, video.duration || location.sourceTime));
-    if (playing) void video.play().catch((cause: unknown) => { setPlaying(false); setError(cause instanceof Error ? cause.message : "Playback could not start"); });
+    if (playing) void video.play().catch((cause: unknown) => {
+      // A play() request is aborted when the element is swapped for the next clip's
+      // (key={activeClip.id}) before playback starts. That race is expected, not a failure:
+      // the replacement element's own effect starts playback. Never surface it.
+      // A stale callback from an element that was already replaced must never touch current state.
+      if (videoRef.current !== video || !video.isConnected) return;
+      if (cause instanceof DOMException && cause.name === "AbortError") return;
+      setPlaying(false); setError(cause instanceof Error ? cause.message : "Playback could not start");
+    });
     else video.pause();
   }, [activeClip?.id, activeAsset?.url, playing, audioReady]);
 
@@ -288,6 +296,32 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     return hydrated;
   };
 
+  const snapToWords = (operations: EditOperation[]): EditOperation[] => {
+    const snap = (clipId: string | undefined, boundary: number, keepAfter: boolean): number => {
+      const clip = project.clips.find((item) => item.id === clipId);
+      if (!clip) return boundary;
+      const word = transcript.find((item) => item.clipId === clip.originId && item.start + 0.02 < boundary && boundary < item.end - 0.02);
+      if (!word) return boundary;
+      return keepAfter ? word.end + 0.01 : Math.max(0, word.start - 0.01);
+    };
+    return operations.map((operation) => {
+      if (operation.type === "trim") {
+        const start = snap(operation.clipId, operation.start, true);
+        const end = snap(operation.clipId, operation.end, false);
+        if (start >= end - 0.05) return operation;
+        return { ...operation, start, end };
+      }
+      if (operation.type === "split") return { ...operation, at: snap(operation.clipId, operation.at, true) };
+      if (operation.type === "delete" && operation.start !== undefined && operation.end !== undefined) {
+        const start = snap(operation.clipId, operation.start, true);
+        const end = snap(operation.clipId, operation.end, false);
+        if (start >= end - 0.05) return operation;
+        return { ...operation, start, end };
+      }
+      return operation;
+    });
+  };
+
   const previewPrompt = async () => {
     if (!prompt.trim()) return;
     setBusy("Getting AI edit operations…"); setError(""); setPlaying(false);
@@ -298,7 +332,12 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       const compact = { ratio: project.ratio, clips: available.map((clip) => ({ id: clip.id, sourceId: clip.sourceId, name: clip.name, trimIn: clip.trimIn, trimOut: clip.trimOut, speed: clip.speed, volume: clip.volume, muted: clip.muted })) };
       const input = editInputSchema.parse({ prompt, transcript: transcript.filter((word) => availableOrigins.has(word.clipId)).slice(0, 10000).map((word) => ({ clipId: available.find((clip) => clip.originId === word.clipId)?.id ?? word.clipId, word: word.word, start: word.start, end: word.end })), timeline: compact });
       const response = editResponseSchema.parse(await callAI<unknown, unknown>("edit", input));
-      const operations = await hydrateSilence(response.operations);
+      let operations = await hydrateSilence(response.operations);
+      if (operations.some((operation) => operation.type === "captions" && operation.enabled) && !transcript.length) {
+        const words = await runTranscription();
+        if (!words.length) throw new Error("No speech was detected in the loaded clips, so there is nothing to caption. Load a clip with speech and try again.");
+      }
+      operations = snapToWords(operations);
       const preview = applyOperations(project, operations);
       setPending({ source: "ai", prompt, summary: response.summary, operations, preview });
       setPlayhead(0);
@@ -306,7 +345,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     finally { setBusy(""); }
   };
 
-  const runTranscription = async () => {
+  const runTranscription = async (): Promise<TranscriptWord[]> => {
     setError("");
     const allWords: TranscriptWord[] = [];
     const knownOrigins = new Set(transcript.map((word) => word.clipId));
@@ -324,7 +363,8 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       if (!project.clips.length) throw new Error("Add a clip before transcribing.");
       setBusy("");
       if (missing.length) setError(`${missing.join(", ")} needs to be chosen again before it can be transcribed. The other clips were transcribed.`);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Transcription failed"); setBusy(""); }
+      return allWords;
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Transcription failed"); setBusy(""); return []; }
   };
 
   const previewSilence = async () => {
@@ -516,7 +556,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       <input type="file" accept="video/*" multiple hidden onChange={(event) => { void takeFiles(Array.from(event.target.files ?? [])); event.target.value = ""; }} />
     </label>}
         {st.tool === "Reference" && <ReferenceMatch project={project} assets={assets} onPropose={(operations,summary) => { setPlaying(false); setPending({source:"basic",prompt:"Basic reference colour match",summary,operations,preview:applyOperations(project,operations)}); setPlayhead(0); }} />}
-        {st.tool === "Transcript" && <TranscriptPanel project={view} words={transcript} change={setTranscript} seek={seek} transcribe={runTranscription} busy={Boolean(busy)} lang={speechLang} setLang={(lang) => setSpeechLang(lang === "hi" ? "hi" : "en")} />}
+        {st.tool === "Transcript" && <TranscriptPanel project={view} words={transcript} change={setTranscript} seek={seek} transcribe={runTranscription} busy={Boolean(busy)} lang={speechLang} setLang={(lang) => setSpeechLang(lang === "hi" ? "hi" : lang === "en" ? "en" : "hinglish")} />}
         {st.tool === "Motion" && <MotionControls project={view} transcript={transcript} change={commit} />}
         {st.tool === "Subject" && <SubjectControls project={view} assets={assets} change={commit} />}
         {st.tool === "Sound" && <StyleControls project={view} transcript={transcript} change={commit} />}
