@@ -57,6 +57,7 @@ export type EditorProject = {
   sfx?: SfxEvent[];
   fisheye?: FisheyeSettings;
   music?: MusicSettings;
+  wrappingCaptions?: { enabled: boolean; centreX: number; centreY: number; radiusX: number; radiusY: number };
 };
 
 export type PendingEdit = {
