@@ -51,7 +51,7 @@ export function safeSilenceRanges(project: EditorProject, transcript: Transcript
   return merged;
 }
 
-export const NOT_AVAILABLE = ["Named commercial tracks", "Automatic face-tracked wrapping captions", "Continuous bubbly graphic scenes", "Beat-timed character replacement scenes"];
+export const NOT_AVAILABLE = ["Named commercial tracks", "Automatic face-tracked wrapping captions", "Automatic music-beat detection for character replacements", "The complete reference-specific scene treatment"];
 export type StyleResult = { project: EditorProject; changed: string[]; couldNot: string[] };
 
 export function applyTalkingHeadStyle(original: EditorProject, transcript: TranscriptWord[], detected: SilenceRange[], detectionFailures: string[] = []): StyleResult {
@@ -111,4 +111,4 @@ export function applyTalkingHeadStyle(original: EditorProject, transcript: Trans
   changed.push("Face grade: saturation 92%, contrast 108%, mild navy shadows and a 25% edge vignette. No global skin-color cast.");
   couldNot.push("Caption placement uses the chest line, not mouth tracking. Check framing if the mouth is unusually low.");
   return { project, changed, couldNot };
-}
+                                                                                                                                  }
