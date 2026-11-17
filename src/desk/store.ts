@@ -23,7 +23,7 @@ export type DeskState = {
   niches: { key: string; items: NichesResult["niches"] } | null;
   niche: { title: string; fit: string } | null;
   research: { key: string; data: ResearchResult; at: string } | null;
-  plan: { key: string; data: PlanResult; at: string } | null;
+  plan: { key: string; data: PlanResult; at: string; startDate?: string } | null;
   scripts: Record<string, { data: ScriptResult; at: string }>;
   results: { id: string; title: string; platform: Platform; views: number; saves: number; shares: number; at: string }[];
 };
