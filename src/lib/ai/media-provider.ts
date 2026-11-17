@@ -72,6 +72,7 @@ export function mediaJobHandlers(kind: "voice" | "video", buildInput: (body: unk
     POST: async ({ request }: { request: Request }) => {
       const settings = env();
       if (!mediaConfigured(settings)) return notConnected();
+      if (!/^Bearer\s+\S+$/i.test(request.headers.get("authorization") ?? "")) return Response.json({ error: "Sign in to use AI generation." }, { status: 401 });
       let input: Record<string, unknown>;
       try { input = buildInput(await request.json()); } catch { return Response.json({ connected: true, error: "Invalid generation request" }, { status: 400 }); }
       try {
@@ -108,4 +109,4 @@ export function mediaJobHandlers(kind: "voice" | "video", buildInput: (body: unk
       catch (error) { return fail(error); }
     },
   };
-}
+                                                                               }
