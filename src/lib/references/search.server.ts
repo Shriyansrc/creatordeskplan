@@ -12,16 +12,17 @@ const inputSchema = z.object({
 type SearchInput = z.infer<typeof inputSchema>;
 type Link = { url: string; title: string };
 const DOMAIN: Partial<Record<WebPlatform, string>> = { yt: "youtube.com", li: "linkedin.com" };
-const WHAT: Record<WebPlatform, string> = { yt: "short videos on YouTube", ig: "Instagram reels", li: "LinkedIn video posts", x: "X posts with video" };
+const WHAT: Record<WebPlatform, string> = { yt: "short videos on YouTube", ig: "Instagram reels (links must be instagram.com/reel/ pages)", li: "LinkedIn video posts", x: "X posts with video" };
 const CACHE_TTL = 6 * 3600_000;
 
 export async function discoverReferences(platform: WebPlatform, idea: string, niche: string): Promise<Link[]> {
   const domain = DOMAIN[platform];
-  if (!domain) return [];
+  // Instagram has no domain filter: the filtered search returned no Instagram pages. Links are still kept only if they classify as instagram.com/reel pages.
+  if (!domain && platform !== "ig") return [];
   const res = await generateResponse({
     model: "openai/gpt-6.1-terra",
     input: `Search the web for real, public ${WHAT[platform]} about this idea and list their page links. Idea: ${idea}.${niche ? ` Topic area: ${niche}.` : ""} Only individual video or post pages, no channels, no search pages. Return at most eight links, concisely.`,
-    tools: [{ type: "web_search", filters: { allowed_domains: [domain] }, search_context_size: "low" }],
+    tools: [{ type: "web_search", ...(domain ? { filters: { allowed_domains: [domain] } } : {}), search_context_size: "low" }],
     max_tool_calls: 1,
     max_output_tokens: 1024,
     parallel_tool_calls: false,
@@ -57,7 +58,7 @@ export function createReferenceHandler(deps: Dependencies) {
     try { input = inputSchema.parse(await request.json()); }
     catch { return Response.json({ error: "Invalid reference search request" }, { status: 400 }); }
     const platform = input.platform;
-    if (!DOMAIN[platform]) return Response.json({ platform, supported: false, videos: [], note: `${platform === "ig" ? "Instagram" : "X"} discovery is unresolved: the route tested returned no ${platform === "ig" ? "Instagram" : "X"} pages in testing.` });
+    if (!DOMAIN[platform] && platform !== "ig") return Response.json({ platform, supported: false, videos: [], note: "X discovery is unresolved: the route tested returned no X pages in testing." });
     const cacheKey = `${platform}|${input.idea.toLowerCase()}|${input.niche.toLowerCase()}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.at < CACHE_TTL) return Response.json({ ...cached.body, cached: true });
