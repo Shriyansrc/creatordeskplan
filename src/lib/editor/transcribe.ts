@@ -60,7 +60,9 @@ function windowCuts(audio: Float32Array): number[] {
   return cuts;
 }
 
-export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgress: (message: string) => void, language: SpeechLanguage = "hinglish"): Promise<TranscriptWord[]> {
+const CANCEL_MESSAGE = "Transcription cancelled. Clips already finished are kept.";
+
+export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgress: (message: string) => void, language: SpeechLanguage = "hinglish", cancelled: () => boolean = () => false): Promise<TranscriptWord[]> {
   const hinglish = language === "hinglish";
   onProgress(hinglish ? "Loading the Hinglish speech model. The first run downloads about 100MB." : "Loading the local Whisper model. The first run downloads model files.");
   const { pipeline, env } = await import("@huggingface/transformers");
@@ -72,6 +74,7 @@ export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgr
       if (progress.status === "progress" && typeof progress.progress === "number") onProgress(`Downloading speech model: ${Math.round(progress.progress)}%`);
     },
   });
+  if (cancelled()) throw new Error(CANCEL_MESSAGE);
   onProgress(`Reading the audio of ${asset.name}…`);
   const audio = await decodeAudio(asset.url);
   const make = (word: string, start: number, end: number, endInferred = false): TranscriptWord => ({ id: makeLocalId("word"), clipId: clip.originId, word, start, end, ...(endInferred ? { endInferred: true } : {}) });
@@ -96,6 +99,7 @@ export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgr
     const cuts = windowCuts(audio);
     const out: TranscriptWord[] = [];
     for (let i = 0; i + 1 < cuts.length; i++) {
+      if (cancelled()) throw new Error(CANCEL_MESSAGE);
       onProgress(`Transcribing Hinglish, part ${i + 1} of ${cuts.length - 1}…`);
       const from = Math.round(cuts[i] ?? 0);
       const to = Math.round(cuts[i + 1] ?? audio.length);
