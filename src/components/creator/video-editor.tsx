@@ -70,6 +70,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const [dropOver, setDropOver] = useState(false);
   const [pending, setPending] = useState<PendingEdit | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [speechLang, setSpeechLang] = useState<"en" | "hi">("en");
   const [promptMode, setPromptMode] = useState<"basic" | "ai">("ai");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -315,7 +316,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
         if (knownOrigins.has(clip.originId)) continue;
         const asset = assets.find((item) => item.sourceId === clip.sourceId);
         if (!asset) { missing.push(clip.name); continue; }
-        const words = await transcribeClip(clip, asset, setBusy);
+        const words = await transcribeClip(clip, asset, setBusy, speechLang);
         allWords.push(...words);
         knownOrigins.add(clip.originId);
         setTranscript([...transcript.filter((word) => word.clipId !== clip.originId), ...allWords]);
@@ -515,7 +516,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       <input type="file" accept="video/*" multiple hidden onChange={(event) => { void takeFiles(Array.from(event.target.files ?? [])); event.target.value = ""; }} />
     </label>}
         {st.tool === "Reference" && <ReferenceMatch project={project} assets={assets} onPropose={(operations,summary) => { setPlaying(false); setPending({source:"basic",prompt:"Basic reference colour match",summary,operations,preview:applyOperations(project,operations)}); setPlayhead(0); }} />}
-        {st.tool === "Transcript" && <TranscriptPanel project={view} words={transcript} change={setTranscript} seek={seek} transcribe={runTranscription} busy={Boolean(busy)} />}
+        {st.tool === "Transcript" && <TranscriptPanel project={view} words={transcript} change={setTranscript} seek={seek} transcribe={runTranscription} busy={Boolean(busy)} lang={speechLang} setLang={(lang) => setSpeechLang(lang === "hi" ? "hi" : "en")} />}
         {st.tool === "Motion" && <MotionControls project={view} transcript={transcript} change={commit} />}
         {st.tool === "Subject" && <SubjectControls project={view} assets={assets} change={commit} />}
         {st.tool === "Sound" && <StyleControls project={view} transcript={transcript} change={commit} />}
