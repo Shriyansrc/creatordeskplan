@@ -185,3 +185,32 @@
  .workspace-editor .timeline-words button { position:absolute; top:0; height:27px; padding:3px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
  .workspace-editor .inspector-heading + .editor-target { margin-top:0; }
 }
+/* Creator Desk blue/pink editor chrome. Footage keeps its own colours. */
+@media(min-width:821px) {
+ .workspace-editor { --panel:#fafbfe; --card:#fafbfe; --line:#dce2ec; --blueSoft:#e9f1ff; color:#202839; }
+ .workspace-editor .editor-workspace { background:#f6f8fc; border-color:#dce2ec; }
+ .workspace-editor .editor-toolbar { background:#eef2f9; border-color:#d8e0ec; }
+ .workspace-editor .editor-inspector,.workspace-editor .inspector-heading { background:#fafbfe; border-color:#dce2ec; }
+ .workspace-editor .estage { background:#e8edf5; }
+ .workspace-editor .editor-toolbar button { color:#46556e; }
+ .workspace-editor .tool-group>span { color:#6a7890; font-weight:600; }
+ .workspace-editor .editor-toolbar button.on { background:#0058cc; color:#fff; }
+ .workspace-editor .btn:not(.g) { background:#0058cc; color:#fff; border-color:#0058cc; }
+ .workspace-editor .btn.g,.workspace-editor .chip { background:#f0f3fa; color:#435775; border-color:#d8e0ed; }
+ .workspace-editor .chip.on { background:#e8f0ff; color:#0058cc; border-color:#aac7ee; }
+ .workspace-editor .editor-timeline { background:#f8faff; border-color:#dce2ec; }
+ .workspace-editor .editor-strip .timeline-clip { background:#edf2fb; border-color:#c7d7ef; color:#36577f; }
+ .workspace-editor .editor-strip .timeline-clip.selected { background:#dceaff; border-color:#0058cc; color:#004eaf; }
+ .workspace-editor .timeline-ruler { border-color:#c5d1e4; background-image:repeating-linear-gradient(to right,transparent 0,transparent 38px,#cdd8e8 38px,#cdd8e8 39px); }
+ .workspace-editor .timeline-ruler>span { background:#0058cc; }
+ .workspace-editor .timeline-words button { background:#faeaf5; color:#8e3c71; border:1px solid #e5bfd7; }
+ .workspace-editor .transcript-words button.selected { background:#e8f0ff; border-color:#0058cc; color:#0058cc; }
+ .workspace-editor input[type=range],.workspace-editor input[type=checkbox] { accent-color:#0058cc; }
+ .workspace-editor .editor-play { background:#fff; border-color:#b2c9e9; color:#0058cc; }
+ .workspace-editor .eratio,.workspace-editor .eratio .chip { color:#61728c; }
+ .workspace-editor .eratio .chip.on { background:#e3ecfc; border-color:#b6cae8; color:#0058cc; }
+ .workspace-editor .pending-track { background:#faeaf5; color:#943c76; border:1px solid #e4bad4; }
+ .workspace-editor .field { border-color:#d5dfed; background:#fff; color:#29374d; }
+ .workspace-editor .note { color:#61708a; }
+ .workspace-editor .inspector-heading { border-bottom:2px solid #c25a9d; }
+                                                   }
