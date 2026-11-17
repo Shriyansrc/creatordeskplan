@@ -738,11 +738,11 @@ function Landing({ go }: { go: (s: Screen) => void }) {
               <div className="body">
                 <div className="plat">
                   <span className="dot" />
-                  instagram<small>caption ready</small>
+                  instagram<small>caption to copy</small>
                 </div>
                 <div className="plat">
                   <span className="dot" />
-                  youtube<small>caption ready</small>
+                  youtube<small>caption to copy</small>
                 </div>
                 <div className="rowline" style={{ marginTop: 8 }}>
                   <span>caption for each platform</span>
@@ -754,7 +754,7 @@ function Landing({ go }: { go: (s: Screen) => void }) {
           <div className="txt">
             <span className="bubble">post it everywhere</span>
             <h2 className="balance">export once, then post</h2>
-            <p>pick your platforms and export once. each platform opens with your caption ready, and you press post yourself.</p>
+            <p>pick your platforms and export once. copy each caption, open the platform, and press post yourself.</p>
             <div className="dots">
               <i />
               <i />
