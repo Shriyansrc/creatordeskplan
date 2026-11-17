@@ -10,13 +10,13 @@ export const Route = createFileRoute("/desk/settings")({ component: Settings });
 
 function Settings() {
   const d = useDesk();
-  const p: Partial<typeof d.profile> = d.profile ?? {};
+  const p = d.profile;
   const { user } = useAuth();
   const nav = useNavigate();
   const rows: [string, string, number][] = [
     ["Goal", String(p.goal ?? ""), 1],
     ["Topic", String(p.topic ?? ""), 2],
-    ["Audience", [p.audience, p.audienceNotes].map((x) => (typeof x === "string" ? x : "")).filter(Boolean).join(" | "), 3],
+    ["Audience", [p.audience, p.audienceNotes].filter(Boolean).join(" | "), 3],
     ["Platforms", (Array.isArray(p.platforms) ? p.platforms : []).map((x) => PLATFORM_COPY[x]?.name ?? String(x)).join(", "), 4],
     ["Time", [hoursLabel(Number(p.hours) || 0), (Array.isArray(p.cameras) ? p.cameras : []).join(" + ")].filter(Boolean).join(", "), 5],
     ["Language", String(p.language ?? ""), 5],
