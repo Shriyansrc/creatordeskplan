@@ -54,7 +54,7 @@ function Welcome() {
               {!user && <GoogleButton />}
             </div>
             <p style={{ fontSize: 15, marginTop: 14 }}>
-              Signing in is optional. Your plans stay in this browser until you save them to your account in Settings.
+              Signing in is optional. When you sign in, your plans are saved to your account automatically and come back on any browser.
             </p>
           </div>
           <div className="dk-cards" aria-hidden="true">
