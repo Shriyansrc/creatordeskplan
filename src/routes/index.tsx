@@ -562,8 +562,8 @@ function Landing({ go }: { go: (s: Screen) => void }) {
             name="kavolt-website-cost.mov"
           />
           <Vw
-            k="sik-720"
-            poster={"/media/sik-720.jpg"}
+            k="sik"
+            poster={"/media/sik.jpg"}
             {...P}
             style={{
               left: 34,
@@ -619,7 +619,7 @@ function Landing({ go }: { go: (s: Screen) => void }) {
             </div>
           </div>
           <p className="pline">works in your browser · nothing to install</p>
-          <Vw k="demo" poster={"/media/demo.jpg"} {...P} demo />
+          <Vw k="sik-720" poster={"/media/sik-720.jpg"} {...P} demo />
         </div>
       </section>
       <div className="marquee">
