@@ -117,11 +117,21 @@ function stripEmDashes(value: unknown): unknown {
   return value;
 }
 
+function zodSummary(error: unknown): string {
+  if (error instanceof z.ZodError) return error.issues.slice(0, 5).map((issue) => `${issue.path.join(".") || "root"} ${issue.message}`).join("; ").slice(0, 500);
+  return "unknown validation failure";
+}
+
 export async function generateValidated<T>(settings: ProviderSettings, task: AITask, input: unknown, schema: ZodType<T>): Promise<T> {
   if (!providerIsConfigured(settings)) throw new Error("AI provider not configured");
   const system = `You are Creator Desk's ${task} engine. Return one valid JSON object only, with no markdown or commentary. Never use em dashes; use a comma, full stop or hyphen instead. ${TASK_RULES[task]}`;
-  const text = ownKeyConfigured(settings)
-    ? await callProvider(settings as ConfiguredProviderSettings, system, JSON.stringify(input))
-    : await callBuiltIn(system, JSON.stringify(input));
-  return schema.parse(stripEmDashes(parseJson(text)));
+  const call = (sys: string) => (ownKeyConfigured(settings) ? callProvider(settings as ConfiguredProviderSettings, sys, JSON.stringify(input)) : callBuiltIn(sys, JSON.stringify(input)));
+  const first = await call(system);
+  try {
+    return schema.parse(stripEmDashes(parseJson(first)));
+  } catch (cause) {
+    if (!(cause instanceof z.ZodError)) throw cause;
+    const retry = await call(`${system} Your previous reply failed validation: ${zodSummary(cause)}. Return a corrected JSON object only, following the contract exactly.`);
+    return schema.parse(stripEmDashes(parseJson(retry)));
+  }
 }
