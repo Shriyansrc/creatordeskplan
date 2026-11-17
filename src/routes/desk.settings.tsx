@@ -39,7 +39,7 @@ function Settings() {
           {user ? (
             <>
               <h3>Signed in</h3>
-              <p style={{ margin: "6px 0 14px" }}>{displayName(user)}. Save your plans to your account to open them on another device.</p>
+              <p style={{ margin: "6px 0 14px" }}>{displayName(user)}. Your plans save to your account automatically. The buttons below save or load by hand.</p>
               <SyncPanel userId={user.id} />
               <button type="button" className="dk-btn secondary" style={{ marginTop: 14 }} onClick={() => void signOut()}>Sign out</button>
             </>
