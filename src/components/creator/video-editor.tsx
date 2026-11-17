@@ -1,3 +1,4 @@
+import { ReferenceMatch } from "@/lib/editor/reference-match-controls";
 import { TranscriptPanel } from "@/lib/editor/transcript-panel";
 import { MotionControls } from "@/lib/editor/motion-controls";
 import { SubjectControls } from "@/lib/editor/subject-controls";
@@ -20,7 +21,7 @@ import { applyTalkingHeadStyle, NOT_AVAILABLE, type StyleResult } from "@/lib/ed
 import "@/lib/editor/editor.css";
 import { usePersistentState } from "@/lib/use-persistent-state";
 
-const TOOLS = ["Media", "Trim", "Transcript", "Captions", "Crop", "Colour", "Style", "Engage", "Sound", "Motion", "Subject"] as const;
+const TOOLS = ["Media", "Reference", "Trim", "Transcript", "Captions", "Crop", "Colour", "Style", "Engage", "Sound", "Motion", "Subject"] as const;
 const RATIOS = ["9:16", "1:1", "4:5", "16:9"] as const;
 
 function formatTime(value: number) {
@@ -358,7 +359,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     {busy && <p className="editor-message" role="status">{busy}</p>}
     {error && <div className="notice editor-message" role="alert">{error}</div>}
     <div className="ed editor-workspace">
-      <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{([['Footage',['Media','Trim','Crop']],['Words',['Transcript','Captions','Engage']],['Look',['Style','Colour','Motion','Subject']],['Audio',['Sound']]] as const).map(([group,tools])=><div className="tool-group" key={group}><span>{group}</span>{tools.map(tool=><button key={tool} className={st.tool===tool?'on':''} onClick={()=>set({tool})}>{tool==='Engage'?'Text & hook':tool==='Sound'?'Music & sound':tool}</button>)}</div>)}</nav>
+      <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{([['Footage',['Media','Reference','Trim','Crop']],['Words',['Transcript','Captions','Engage']],['Look',['Style','Colour','Motion','Subject']],['Audio',['Sound']]] as const).map(([group,tools])=><div className="tool-group" key={group}><span>{group}</span>{tools.map(tool=><button key={tool} className={st.tool===tool?'on':''} onClick={()=>set({tool})}>{tool==='Engage'?'Text & hook':tool==='Sound'?'Music & sound':tool}</button>)}</div>)}</nav>
       <section className="editor-viewer" aria-label="Video and timeline">
         <div className="estage">
           <div className="phone editor-phone" style={{ aspectRatio: view.ratio.replace(":", "/") }} onPointerDown={(event) => {
@@ -405,6 +406,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       <span style={{ fontSize: 14 }}>or tap to choose videos from your device. They open on the timeline below and stay on this device.</span>
       <input type="file" accept="video/*" multiple hidden onChange={(event) => { void takeFiles(Array.from(event.target.files ?? [])); event.target.value = ""; }} />
     </label>}
+        {st.tool === "Reference" && <ReferenceMatch project={project} assets={assets} onPropose={(operations,summary) => { setPlaying(false); setPending({source:"basic",prompt:"Basic reference colour match",summary,operations,preview:applyOperations(project,operations)}); setPlayhead(0); }} />}
         {st.tool === "Transcript" && <TranscriptPanel project={view} words={transcript} change={setTranscript} seek={seek} transcribe={runTranscription} busy={Boolean(busy)} />}
         {st.tool === "Motion" && <MotionControls project={view} transcript={transcript} change={commit} />}
         {st.tool === "Subject" && <SubjectControls project={view} assets={assets} change={commit} />}
@@ -413,12 +415,13 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
 </>}
         <details className="editor-prompt"><summary>Edit by prompt</summary>
     <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div className="nav"><button className={promptMode === "basic" ? "on" : ""} onClick={() => setPromptMode("basic")}>Basic local mode</button><button className={promptMode === "ai" ? "on" : ""} onClick={() => setPromptMode("ai")} disabled={connection.state !== "connected"}>AI mode</button></div><span className="tg n">{promptMode === "basic" ? "Basic, runs in your browser" : connection.state === "connected" ? "Connected" : "Not connected"}</span></div><div className="row" style={{ marginTop: 10 }}><input ref={promptRef} className="field" aria-label="Edit by prompt" placeholder="Tell the editor what to change, in your words..." value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void previewPrompt(); }} /><button className="btn" disabled={Boolean(busy) || !prompt.trim() || (promptMode === "ai" && connection.state !== "connected")} onClick={previewPrompt}>Apply edit</button></div>{promptMode === "ai" && connection.state !== "connected" && <p className="note">{NOT_CONNECTED_COPY}</p>}<p className="note">Every edit shows its change list first. Apply or undo. Nothing silently changes.</p></div>
-    {pending && <div className="panel pending-edit" style={{ marginTop: 12 }}><div className="row"><h2>Review the proposed edit</h2><span className="sp" /><span className={"tg " + (pending.source === "ai" ? "r" : "n")}>{pending.source === "ai" ? "Connected AI operations" : "Basic local operations"}</span></div><p>{pending.summary}</p><div className="stack" style={{ margin: "12px 0" }}>{pending.operations.map((operation, index) => <div className="card" key={`${operation.type}-${index}`}>{describeOperation(operation)}</div>)}</div><div className="row" style={{ flexWrap: "wrap" }}><button className="btn" onClick={() => commit(pending.preview)}>Accept edit</button><button className="btn g" onClick={() => setPending(null)}>Reject</button><button className="btn g" onClick={() => { setPrompt(pending.prompt); setPending(null); promptRef.current?.focus(); }}>Tweak prompt</button></div></div>}
+
         </details>
+    {pending && <div className="panel pending-edit" style={{ marginTop: 12 }}><div className="row"><h2>Review the proposed edit</h2><span className="sp" /><span className={"tg " + (pending.source === "ai" ? "r" : "n")}>{pending.source === "ai" ? "Connected AI operations" : "Basic local operations"}</span></div><p>{pending.summary}</p><div className="stack" style={{ margin: "12px 0" }}>{pending.operations.map((operation, index) => <div className="card" key={`${operation.type}-${index}`}>{describeOperation(operation)}</div>)}</div><div className="row" style={{ flexWrap: "wrap" }}><button className="btn" onClick={() => commit(pending.preview)}>Accept edit</button><button className="btn g" onClick={() => setPending(null)}>Reject</button><button className="btn g" onClick={() => { setPrompt(pending.prompt); setPending(null); promptRef.current?.focus(); }}>Tweak prompt</button></div></div>}
       </aside>
     </div>
     <footer className="editor-export">
     <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div><div className="lab">Real on-device export</div><select className="field" aria-label="Export format" value={exportFormat} onChange={(event) => { if (exportUrl) URL.revokeObjectURL(exportUrl); setExportUrl(""); setExportName(""); setExportLabel(""); setExportProgress(0); setExportFormat(event.target.value as "webm" | "mp4"); }}><option value="webm">WebM</option><option value="mp4">MP4 (local FFmpeg conversion)</option></select></div><span className="sp" /><button className="btn" disabled={exporting || !project.clips.length} onClick={doExport}>Export video</button>{exportUrl && <a className="btn g" href={exportUrl} download={exportName}>Download {exportName.split(".").pop()?.toUpperCase()}</a>}{exportUrl && <button className="btn g" onClick={() => go("publish")}>Continue to publish</button>}</div>{exportLabel && <><div className="bar" style={{ marginTop: 12 }}><i style={{ width: `${Math.round(exportProgress * 100)}%` }} /></div><p className="note">{exportLabel} · {Math.round(exportProgress * 100)}%</p></>}<p className="note">Export renders every frame at 30 fps, then packs audio on this device. It may take longer than the video. Keep this tab open. Both formats load the local FFmpeg core on first use. Your original is never modified.</p></div>
     </footer>
   </div>;
-      }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   }
