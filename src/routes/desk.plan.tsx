@@ -64,7 +64,7 @@ function Plan() {
   });
   const doPlan = () => run("plan", async () => {
     if (!research) throw new Error("Run research first.");
-    const r = await runPlan({ ...base, research });
+    const r = await runPlan({ ...base, research, ...(p.language ? { language: p.language } : {}) });
     patchDesk({ plan: { key, data: r, at: new Date().toISOString() } });
     setTab("30-day plan");
   });
