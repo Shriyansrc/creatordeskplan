@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Platform } from "@/lib/ai/contracts";
 import { ALL_PLATFORMS } from "@/lib/creator-shared";
 import { SetupFrame, PlatLogo, Spinner } from "@/desk/ui";
-import { CAMERA, GOALS, LANGUAGES, OTHER_LANGUAGES, PLATFORM_COPY, TOOLS, getDesk, hoursLabel, patchDesk, patchProfile, useDesk } from "@/desk/store";
+import { CAMERA, CONTENT_TYPES, GOALS, LANGUAGES, OTHER_LANGUAGES, PLATFORM_COPY, TOOLS, getDesk, hoursLabel, patchDesk, patchProfile, useDesk } from "@/desk/store";
 import { errorText, suggestAudiences, suggestGoals, suggestPlatforms, suggestTopics } from "@/desk/api";
 
 export const Route = createFileRoute("/setup")({
@@ -178,6 +178,14 @@ function TopicStep() {
       <Head no="02 / Your topic" title="What do you make content about?" intro="Type it in your own words. Your research, plan and scripts all start from this answer." />
       <div style={{ maxWidth: 760 }}>
         <input className="dk-field" autoFocus value={p.topic} onChange={(e) => patchProfile({ topic: e.target.value })} placeholder="Type it in your own words..." aria-label="Your topic" />
+        <div className="dk-label" style={{ marginTop: 22 }}>What kind of content do you post? <span className="dk-tag blue" style={{ marginLeft: 8 }}>pick all that fit</span></div>
+        <div className="dk-chips">
+          {CONTENT_TYPES.map((t) => <button key={t} type="button" className={`dk-chip${p.contentTypes.includes(t) ? " sel" : ""}`} onClick={() => patchProfile({ contentTypes: p.contentTypes.includes(t) ? p.contentTypes.filter((x) => x !== t) : [...p.contentTypes, t] })} aria-pressed={p.contentTypes.includes(t)}>{t}</button>)}
+        </div>
+        <div className="dk-row" style={{ marginTop: 8 }}>
+          <input className="dk-field" style={{ maxWidth: 360 }} placeholder="Add your own kind..." aria-label="Add your own content type" onKeyDown={(e) => { if (e.key === "Enter") { const v = e.currentTarget.value.trim(); if (v && !p.contentTypes.includes(v)) patchProfile({ contentTypes: [...p.contentTypes, v] }); e.currentTarget.value = ""; } }} />
+          {p.contentTypes.filter((t) => !(CONTENT_TYPES as readonly string[]).includes(t)).map((t) => <button key={t} type="button" className="dk-chip sel" onClick={() => patchProfile({ contentTypes: p.contentTypes.filter((x) => x !== t) })}>{t} ×</button>)}
+        </div>
         <div className="dk-row" style={{ justifyContent: "space-between", marginTop: 12 }}>
           <span style={{ fontSize: 15, color: "var(--mute)" }}>No default topic is assumed.</span>
           <button type="button" className="dk-link" onClick={() => setHelp(!help)}>Not sure? Answer 3 questions and we suggest topics</button>
