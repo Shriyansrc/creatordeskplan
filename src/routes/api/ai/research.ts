@@ -45,7 +45,8 @@ export const Route = createFileRoute("/api/ai/research")({
           };
           return Response.json({ connected: true, data: out });
         } catch (error) {
-          const message = error instanceof Error && error.name !== "ZodError" ? error.message : "Response did not match the required schema";
+          const issues = (error as { issues?: { path: (string | number)[]; message: string }[] }).issues;
+          const message = error instanceof Error && error.name !== "ZodError" ? error.message : `Response did not match the required schema${issues?.length ? `: ${issues.slice(0, 3).map((x) => `${x.path.join(".")} ${x.message}`).join("; ")}` : ""}`;
           return Response.json({ connected: true, error: message.slice(0, 300) }, { status: 502 });
         }
       },
