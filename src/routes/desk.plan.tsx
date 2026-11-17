@@ -36,6 +36,7 @@ function Plan() {
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   const [sel, setSel] = useState<string>("");
+  const [scriptDepth, setScriptDepth] = useState<"auto" | "brief" | "deep">("auto");
   const [myStyle] = usePersistentState<StyleResult | null>("style", null);
   const niche = d.niche?.title ?? "";
   const base = { topic: p.topic, goal: p.goal, niche, platforms: p.platforms };
@@ -74,7 +75,7 @@ function Plan() {
   const script = topic ? d.scripts[topic.id] : undefined;
   const doScript = (instruction?: string) => run("script", async () => {
     if (!topic) return;
-    const r = await runScript({ topic: topic.title, niche, goal: goalWithPurpose, platform: topic.platform, ...(topic.format ? { format: topic.format } : {}), painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
+    const r = await runScript({ depth: scriptDepth, topic: topic.title, niche, goal: goalWithPurpose, platform: topic.platform, ...(topic.format ? { format: topic.format } : {}), painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
     patchDesk({ scripts: { ...d.scripts, [topic.id]: { data: r, at: new Date().toISOString() } } });
   });
 
@@ -89,7 +90,9 @@ function Plan() {
 
       {tab === "Research" && (
         <>
-          <div className="dk-row" style={{ marginBottom: 16 }}>
+          <label className="dk-label">Draft depth<select className="dk-field" aria-label="Draft depth" value={scriptDepth} onChange={(e) => setScriptDepth(e.target.value as "auto" | "brief" | "deep")}><option value="auto">Let the topic decide</option><option value="brief">Brief: one useful point</option><option value="deep">Deeper: explain with an example</option></select></label>
+            <p style={{ margin: "8px 0 12px" }}>Length follows the idea, not a fixed duration. Your existing draft stays unchanged until you request a new one.</p>
+            <div className="dk-row" style={{ marginBottom: 16 }}>
             <button type="button" className="dk-btn" disabled={busy !== ""} onClick={() => void doResearch()}>{busy === "research" ? <Spinner /> : null}{research ? "Run research again" : "Run research"}</button>
             {research && <button type="button" className="dk-btn secondary" disabled={busy !== ""} onClick={() => void doPlan()}>{busy === "plan" ? <Spinner /> : null}{plan ? "Rebuild 30-day plan" : "Build my 30-day plan"}</button>}
           </div>
@@ -160,6 +163,8 @@ function Plan() {
           <>
             <h2 style={{ marginBottom: 6 }}>{topic.title}</h2>
             <p style={{ marginBottom: 14 }}>Day {topic.day} · {PNAME[topic.platform]} · {formatLabel(topic)}</p>
+            <label className="dk-label">Draft depth<select className="dk-field" aria-label="Draft depth" value={scriptDepth} onChange={(e) => setScriptDepth(e.target.value as "auto" | "brief" | "deep")}><option value="auto">Let the topic decide</option><option value="brief">Brief: one useful point</option><option value="deep">Deeper: explain with an example</option></select></label>
+            <p style={{ margin: "8px 0 12px" }}>Length follows the idea, not a fixed duration. Your existing draft stays unchanged until you request a new one.</p>
             <div className="dk-row" style={{ marginBottom: 16 }}>
               <button type="button" className="dk-btn" disabled={busy !== ""} onClick={() => void doScript()}>{busy === "script" ? <Spinner /> : null}{script ? "Write a new draft" : topic.format && topic.format !== "video" ? "Write the post" : "Write the script"}</button>
               {script && ["Shorter", "More direct", "Stronger hook"].map((x) => <button key={x} type="button" className="dk-chip" disabled={busy !== ""} onClick={() => void doScript(x)}>{x}</button>)}
@@ -167,10 +172,10 @@ function Plan() {
             {!script && busy !== "script" && <div className="dk-empty"><b>Your draft appears here</b>Post or script copy, call to action and hashtags. You edit every word.</div>}
             {script && (
               <div className="dk-list">
-                <span className="dk-tag est">AI DRAFT. EDIT IT.</span>
+                <span className="dk-tag est">AI DRAFT. EDIT IT.</span><div className="dk-item"><div className="dk-label">Read as one piece</div><p style={{ whiteSpace: "pre-wrap" }}>{[script.data.hook, script.data.problem, script.data.solution, script.data.cta].filter(Boolean).join("\n\n")}</p></div>
                 {(["hook", "problem", "solution", "cta"] as const).map((k) => (
-                  <label key={k} className="dk-item"><div className="dk-label">{k === "cta" ? "Call to action" : k}</div>
-                    <textarea className="dk-field" rows={4} value={script.data[k]} onChange={(e) => patchDesk({ scripts: { ...d.scripts, [topic.id]: { ...script, data: { ...script.data, [k]: e.target.value } } } })} />
+                  <label key={k} className="dk-item"><div className="dk-label">{k === "cta" ? "Call to action" : k === "problem" ? "Context (optional)" : k === "solution" ? "Main body" : "Opening"}</div>
+                    <textarea className="dk-field" rows={Math.min(12, Math.max(2, script.data[k].split("\n").length + Math.ceil(script.data[k].length / 100)))} value={script.data[k]} onChange={(e) => patchDesk({ scripts: { ...d.scripts, [topic.id]: { ...script, data: { ...script.data, [k]: e.target.value } } } })} />
                   </label>
                 ))}
                 <div className="dk-item"><div className="dk-label">Hashtags</div><p>{script.data.hashtags.join(" ")}</p><p style={{ marginTop: 6 }}>Search phrase: {script.data.seoPhrase}</p></div>
@@ -192,4 +197,4 @@ function Plan() {
       )}
     </>
   );
-}
+          }
