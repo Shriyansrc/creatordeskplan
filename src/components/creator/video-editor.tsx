@@ -14,6 +14,7 @@ import { applyOperations, clipDuration, clipFromAsset, clipStart, createProject,
 import { CAPTION_FONT_OPTIONS, captionDefaultFont } from "@/lib/editor/caption-font";
 import { CaptionPreview } from "@/lib/editor/caption-preview";
 import { addSessionClips, clearSessionExport, getSessionClips, saveSessionExport } from "@/lib/editor/session-store";
+import { handoffSnapshot, markHandedOff, mergeSessionClips } from "@/lib/editor/handoff";
 import { transcribeClip } from "@/lib/editor/transcribe";
 import type { CaptionStyle, ClipAsset, EditorClip, EditorProject, PendingEdit, TranscriptWord } from "@/lib/editor/types";
 import { StyleControls } from "@/lib/editor/style-controls";
@@ -127,8 +128,10 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     if (!projectReady) return;
     const available = getSessionClips();
     setAssets(available);
-    if (!project.clips.length && available.length) {
-      setProject((current) => current.clips.length ? current : { ...current, clips: available.map(clipFromAsset) });
+    if (available.length) {
+      const handed = handoffSnapshot();
+      setProject((current) => mergeSessionClips(current, available, handed, clipFromAsset));
+      markHandedOff(available);
     }
   }, [projectReady, setProject]);
 
@@ -257,6 +260,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     setBusy("Reading clips…"); setError("");
     try {
       const added = await addSessionClips(files);
+      markHandedOff(added);
       setAssets(getSessionClips());
       const live = new Set(getSessionClips().map((asset) => asset.sourceId));
       const used = new Set<string>();
@@ -576,3 +580,4 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     </footer>
   </div>;
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+
