@@ -1,0 +1,14 @@
+import { captionCues } from './captions';
+import type { EditorProject, TranscriptWord } from './types';
+/** Three real timed words at a time. Never derives timing from text length. */
+export function karaokeAt(project:EditorProject,words:TranscriptWord[],time:number){
+ const cues=captionCues(project,words);const active=cues.findIndex(cue=>time>=cue.start&&time<cue.spokenEnd);if(active<0)return null;
+ let first=active;while(first>0&&cues[first-1]!.phrase===cues[active]!.phrase)first--;
+ const group=first+Math.floor((active-first)/3)*3;return cues.slice(group,group+3).filter(cue=>cue.phrase===cues[active]!.phrase).map(cue=>({text:cue.word.word,active:cue===cues[active]}));
+}
+export function drawKaraoke(context:CanvasRenderingContext2D,canvas:HTMLCanvasElement,project:EditorProject,words:TranscriptWord[],time:number){
+ const line=karaokeAt(project,words,time);if(!line)return;const size=project.captionStyle.size*canvas.width/720;
+ context.save();context.font=`600 ${size}px CDBody, sans-serif`;context.textAlign='left';context.textBaseline='middle';context.shadowColor='rgba(0,0,0,.75)';context.shadowBlur=4;context.shadowOffsetY=2;
+ const gap=context.measureText(' ').width;const widths=line.map(word=>context.measureText(word.text).width);const total=widths.reduce((sum,width)=>sum+width,0)+gap*(line.length-1);const scale=Math.min(1,canvas.width*.9/Math.max(1,total));context.translate(canvas.width/2,canvas.height*project.captionStyle.position/100);context.scale(scale,scale);let x=-total/2;
+ line.forEach((word,i)=>{context.fillStyle=word.active?'#FBED4F':project.captionStyle.color;context.fillText(word.text,x,0);x+=widths[i]!+gap});context.restore();
+}
