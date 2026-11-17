@@ -65,7 +65,7 @@ function Plan() {
   const doPlan = () => run("plan", async () => {
     if (!research) throw new Error("Run research first.");
     const r = await runPlan({ ...base, research, ...(p.language ? { language: p.language } : {}) });
-    patchDesk({ plan: { key, data: r, at: new Date().toISOString() } });
+    patchDesk({ plan: { key, data: r, at: new Date().toISOString(), startDate: `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}` } });
     setTab("30-day plan");
   });
   const topic: PlanTopic | undefined = plan?.topics.find((t) => t.id === sel);
