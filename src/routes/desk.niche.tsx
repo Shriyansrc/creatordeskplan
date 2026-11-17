@@ -50,20 +50,36 @@ function Niche() {
       {err && <div className="dk-err" role="alert">{err}</div>}
       {items.length === 0 && !busy && <div className="dk-empty" style={{ padding: "70px 26px" }}><b>Niche suggestions appear here</b>Each one shows its angle and why it could work for your audience. Suggestions, not promises. You pick, edit or regenerate. Nothing is chosen for you.</div>}
       {busy && items.length === 0 && <div className="dk-empty" style={{ padding: "70px 26px" }}><Spinner /> Generating niches from "{p.topic}"...</div>}
-      <div className="dk-g2" style={{ gap: 16 }}>
-        {items.map((n) => (
-          <button key={n.title} type="button" className={`dk-choice${d.niche?.title === n.title ? " sel" : ""}`} onClick={() => patchDesk({ niche: { title: n.title, fit: n.fit } })} aria-pressed={d.niche?.title === n.title}>
-            <span className="sw" />
-            <h3>{n.title}</h3>
-            <p>{n.fit}</p>
-            <div className="mini"><span className="dk-tag est">AI SUGGESTION</span></div>
-          </button>
-        ))}
+      <div className="dk-row" style={{ marginBottom: 10 }}>
+        <span className="dk-label" style={{ margin: 0 }}>Pick up to 3 niches{d.pickedNiches.length ? ` (${d.pickedNiches.length}/3 chosen)` : ""} - tap again to remove:</span>
       </div>
-      {d.niche && (
-        <div className="dk-row" style={{ marginTop: 22 }}>
-          <input className="dk-field" style={{ maxWidth: 560 }} value={d.niche.title} onChange={(e) => patchDesk({ niche: { title: e.target.value, fit: d.niche?.fit ?? "" } })} aria-label="Edit your niche" />
-          <Link to="/desk/plan" className="dk-btn">Use this niche: research and plan</Link>
+      <div className="dk-g2" style={{ gap: 16 }}>
+        {items.map((n) => {
+          const isPicked = d.pickedNiches.some((x) => x.title === n.title);
+          const pick = () => {
+            if (isPicked) patchDesk({ pickedNiches: d.pickedNiches.filter((x) => x.title !== n.title) });
+            else if (d.pickedNiches.length < 3) patchDesk({ pickedNiches: [...d.pickedNiches, { title: n.title, fit: n.fit }] });
+          };
+          return (
+            <button key={n.title} type="button" className={`dk-choice${isPicked ? " sel" : ""}`} onClick={pick} aria-pressed={isPicked} disabled={!isPicked && d.pickedNiches.length >= 3}>
+              <span className="sw" />
+              <h3>{n.title}</h3>
+              <p>{n.fit}</p>
+              <div className="mini"><span className="dk-tag est">AI SUGGESTION</span></div>
+            </button>
+          );
+        })}
+      </div>
+      {d.pickedNiches.length > 0 && (
+        <div style={{ marginTop: 22 }}>
+          {d.pickedNiches.map((n, i) => (
+            <div className="dk-row" key={n.title} style={{ marginBottom: 10 }}>
+              <input className="dk-field" style={{ maxWidth: 560 }} value={n.title} onChange={(e) => patchDesk({ pickedNiches: d.pickedNiches.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} aria-label={`Edit niche ${i + 1}`} />
+            </div>
+          ))}
+          <div className="dk-row">
+            <Link to="/desk/plan" className="dk-btn">Use {d.pickedNiches.length === 1 ? "this niche" : "these niches"}: research and plan</Link>
+          </div>
         </div>
       )}
       <div className="dk-note" style={{ marginTop: 22 }}><b>Tested against reality:</b> your niche is checked against real results in Performance, and you can change it anytime.</div>
