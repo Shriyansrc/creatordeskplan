@@ -34,7 +34,7 @@ function Setup() {
     2: p.topic.trim().length > 2,
     3: (p.audience.trim() || p.audienceNotes.trim()).length > 1,
     4: p.platforms.length > 0,
-    5: p.hours > 0 && p.tools.length > 0 && p.camera !== "" && p.language !== "",
+    5: p.hours > 0 && p.tools.length > 0 && p.cameras.length > 0 && p.language !== "",
   };
   const next: Record<number, string> = { 1: "Next: my topic", 2: "Next: my audience", 3: "Next: where I post", 4: "Next: my time & tools", 5: "Finish setup" };
   const hint: Record<number, string> = {
@@ -341,8 +341,8 @@ function TimeStep() {
           <div className="dk-chips">{TOOLS.map((t) => <button key={t} type="button" className={`dk-chip${p.tools.includes(t) ? " sel" : ""}`} onClick={() => toggleTool(t)}>{t}</button>)}</div>
         </div>
         <div>
-          <div className="dk-label">On camera?</div>
-          <div className="dk-chips">{CAMERA.map((t) => <button key={t} type="button" className={`dk-chip${p.camera === t ? " sel" : ""}`} onClick={() => patchProfile({ camera: t })}>{t}</button>)}</div>
+          <div className="dk-label">On camera? <span className="dk-tag blue" style={{ marginLeft: 8 }}>pick all that fit</span></div>
+          <div className="dk-chips">{CAMERA.map((t) => <button key={t} type="button" className={`dk-chip${p.cameras.includes(t) ? " sel" : ""}`} onClick={() => patchProfile({ cameras: p.cameras.includes(t) ? p.cameras.filter((x) => x !== t) : [...p.cameras, t] })} aria-pressed={p.cameras.includes(t)}>{t}</button>)}</div>
           <div className="dk-label" style={{ marginTop: 26 }}>Language & voice</div>
           <div className="dk-chips">{LANGUAGES.map((t) => <button key={t} type="button" className={`dk-chip${p.language === t ? " sel" : ""}`} onClick={() => patchProfile({ language: t })}>{t}</button>)}
             <select className={`dk-chip${p.language && !(LANGUAGES as readonly string[]).includes(p.language) ? " sel" : ""}`} aria-label="Select other language" value={p.language && !(LANGUAGES as readonly string[]).includes(p.language) ? p.language : ""} onChange={(e) => { if (e.target.value) patchProfile({ language: e.target.value }); }}>
@@ -352,7 +352,7 @@ function TimeStep() {
           </div>
           <div className="dk-panel" style={{ marginTop: 26 }}>
             <div className="dk-label">Your script style</div>
-            <p>{p.language && p.camera ? `Scripts will be written in ${p.language}, for ${p.camera.toLowerCase()}.` : "Pick a language and how you appear. Nothing is pre-set."}</p>
+            <p>{p.language && p.cameras.length ? `Scripts will be written in ${p.language}, for ${p.cameras.join(" + ").toLowerCase()}.` : "Pick a language and how you appear. Nothing is pre-set."}</p>
           </div>
         </div>
       </div>
@@ -368,7 +368,7 @@ function Done({ go }: { go: (n: number) => void }) {
     ["Topic", p.topic, 2],
     ["Audience", [p.audience, p.audienceNotes].filter(Boolean).join(" | "), 3],
     ["Platforms", p.platforms.map((x) => PLATFORM_COPY[x].name).join(", "), 4],
-    ["Time", [hoursLabel(p.hours), p.camera].filter(Boolean).join(", "), 5],
+    ["Time", [hoursLabel(p.hours), p.cameras.join(" + ")].filter(Boolean).join(", "), 5],
     ["Language", p.language, 5],
   ];
   return (
