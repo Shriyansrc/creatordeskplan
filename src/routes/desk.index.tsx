@@ -38,7 +38,7 @@ function Home() {
   },[]);
   const week=rollingWeek(d.plan,today);
   const names={yt:"YouTube",ig:"Instagram",li:"LinkedIn",x:"X"};
-  const step = !d.niche ? { to: "/desk/niche", title: "Choose your niche", text: "AI suggests niches from your topic and audience. You pick one.", cta: "Find my niche" } : !d.plan ? { to: "/desk/plan", title: "Build your first 30-day plan", text: "Research, ranked topics and a calendar that fits the time you told us you have.", cta: "Build my first plan" } : { to: "/desk/plan", title: "Open your plan", text: "Your ranked topics and calendar are ready.", cta: "Open plan" };
+  const step = d.pickedNiches.length === 0 ? { to: "/desk/niche", title: "Choose your niche", text: "AI suggests niches from your topic and audience. You pick one.", cta: "Find my niche" } : !d.plan ? { to: "/desk/plan", title: "Build your first 30-day plan", text: "Research, ranked topics and a calendar that fits the time you told us you have.", cta: "Build my first plan" } : { to: "/desk/plan", title: "Open your plan", text: "Your ranked topics and calendar are ready.", cta: "Open plan" };
   return (
     <>
       <h1>Welcome to your desk</h1>
@@ -64,4 +64,4 @@ function Home() {
       <div className="dk-empty">Videos you script, record, drop in or edit appear here.<br />Nothing is pre-made for you.</div>
     </>
   );
-      }
+          }
