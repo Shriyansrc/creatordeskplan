@@ -58,13 +58,15 @@ function Plan() {
     try { await fn(); } catch (e) { setErr(errorText(e)); }
     setBusy("");
   };
+  const goalWithPurpose = [p.goal, p.purpose].filter(Boolean).join(": ").slice(0, 300);
+  const formatLabel = (t: PlanTopic) => t.format ? `${t.format} post` : "Format not stored";
   const doResearch = () => run("research", async () => {
-    const r = await runResearch({ ...base, audienceNotes: (p.audience + ". " + p.audienceNotes).slice(0, 3900), painPoints: p.painPoints.slice(0, 20) });
+    const r = await runResearch({ ...base, goal: goalWithPurpose, audienceNotes: (p.audience + ". " + p.audienceNotes).slice(0, 3900), painPoints: p.painPoints.slice(0, 20) });
     patchDesk({ research: { key, data: r, at: new Date().toISOString() } });
   });
   const doPlan = () => run("plan", async () => {
     if (!research) throw new Error("Run research first.");
-    const r = await runPlan({ ...base, research, ...(p.language ? { language: p.language } : {}) });
+    const r = await runPlan({ ...base, goal: goalWithPurpose, research, ...(p.language ? { language: p.language } : {}) });
     patchDesk({ plan: { key, data: r, at: new Date().toISOString(), startDate: `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}` } });
     setTab("30-day plan");
   });
@@ -72,7 +74,7 @@ function Plan() {
   const script = topic ? d.scripts[topic.id] : undefined;
   const doScript = (instruction?: string) => run("script", async () => {
     if (!topic) return;
-    const r = await runScript({ topic: topic.title, niche, goal: p.goal, platform: topic.platform, painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
+    const r = await runScript({ topic: topic.title, niche, goal: goalWithPurpose, platform: topic.platform, ...(topic.format ? { format: topic.format } : {}), painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
     patchDesk({ scripts: { ...d.scripts, [topic.id]: { data: r, at: new Date().toISOString() } } });
   });
 
@@ -130,11 +132,11 @@ function Plan() {
           </div>
         ) : (
           <>
-            <p style={{ marginBottom: 12 }}><span className="dk-tag est">AI ESTIMATE</span> Ranks are suggestions. Real results come from Performance after you post.</p>
+            <p style={{ marginBottom: 12 }}><span className="dk-tag est">AI ESTIMATE</span> Ranks are suggestions. Real results come from Performance after you post. Older plans keep their original topics; rebuild when you want your latest goal and the mixed post formats applied.</p>
             <div className="dk-cal" aria-label="30-day calendar">
               {plan.calendar.slice().sort((a, b) => a.day - b.day).map((c) => {
                 const t = plan.topics.find((x) => x.id === c.topicId);
-                return <button key={c.day} type="button" className={sel === t?.id ? "sel" : ""} onClick={() => { if (t) { setSel(t.id); setTab("Script"); } }} aria-label={`Day ${c.day}: ${t?.title ?? ""}`}><b>Day {c.day}</b><span>{t?.title}</span></button>;
+                return <button key={c.day} type="button" className={sel === t?.id ? "sel" : ""} onClick={() => { if (t) { setSel(t.id); setTab("Script"); } }} aria-label={`Day ${c.day}: ${t?.title ?? ""}`}><b>Day {c.day}</b><span>{t?.title}</span><small>{t ? formatLabel(t) : ""}</small></button>;
               })}
             </div>
             <div className="dk-label" style={{ marginTop: 22 }}>Ranked topics</div>
@@ -142,7 +144,7 @@ function Plan() {
               {plan.topics.slice().sort((a, b) => a.rank - b.rank).map((t) => (
                 <button key={t.id} type="button" className="dk-item" style={{ textAlign: "left", border: 0, cursor: "pointer", font: "inherit", color: "var(--ink)" }} onClick={() => { setSel(t.id); setTab("Script"); }}>
                   <h3>#{t.rank} {t.title}</h3>
-                  <p>Day {t.day} · {PNAME[t.platform]} · {t.kind} · score {t.score}</p>
+                  <p>Day {t.day} · {PNAME[t.platform]} · {formatLabel(t)} · {t.pillar ?? t.kind} · score {t.score}</p>
                   <p style={{ marginTop: 4 }}>{t.reason}</p>
                 </button>
               ))}
@@ -157,12 +159,12 @@ function Plan() {
         ) : (
           <>
             <h2 style={{ marginBottom: 6 }}>{topic.title}</h2>
-            <p style={{ marginBottom: 14 }}>Day {topic.day} · {PNAME[topic.platform]}</p>
+            <p style={{ marginBottom: 14 }}>Day {topic.day} · {PNAME[topic.platform]} · {formatLabel(topic)}</p>
             <div className="dk-row" style={{ marginBottom: 16 }}>
-              <button type="button" className="dk-btn" disabled={busy !== ""} onClick={() => void doScript()}>{busy === "script" ? <Spinner /> : null}{script ? "Write a new script" : "Write the script"}</button>
+              <button type="button" className="dk-btn" disabled={busy !== ""} onClick={() => void doScript()}>{busy === "script" ? <Spinner /> : null}{script ? "Write a new draft" : topic.format && topic.format !== "video" ? "Write the post" : "Write the script"}</button>
               {script && ["Shorter", "More direct", "Stronger hook"].map((x) => <button key={x} type="button" className="dk-chip" disabled={busy !== ""} onClick={() => void doScript(x)}>{x}</button>)}
             </div>
-            {!script && busy !== "script" && <div className="dk-empty"><b>Your script appears here</b>Hook, problem, solution, call to action and hashtags. You edit every word.</div>}
+            {!script && busy !== "script" && <div className="dk-empty"><b>Your draft appears here</b>Post or script copy, call to action and hashtags. You edit every word.</div>}
             {script && (
               <div className="dk-list">
                 <span className="dk-tag est">AI DRAFT. EDIT IT.</span>
@@ -175,7 +177,7 @@ function Plan() {
                 {script.data.title && <div className="dk-item"><div className="dk-label">Title</div><p>{script.data.title}</p></div>}
                 {script.data.caption && <div className="dk-item"><div className="dk-label">Caption</div><p style={{ whiteSpace: "pre-wrap" }}>{script.data.caption}</p></div>}
                 <ListenButton text={[script.data.hook, script.data.problem, script.data.solution, script.data.cta].join(" ")} />
-                <Link to="/desk/create" className="dk-btn">Next: record or create</Link>
+                {(!topic.format || topic.format === "video") ? <Link to="/desk/create" className="dk-btn">Next: record or create</Link> : <p>Your {topic.format} post draft is above. Edit and copy the text into your publishing platform{topic.format === "image" ? ", and pair it with your own image or design" : ""}. No video recording is needed.</p>}
               </div>
             )}
             <h2 style={{ margin: "28px 0 6px" }}>My style</h2>
