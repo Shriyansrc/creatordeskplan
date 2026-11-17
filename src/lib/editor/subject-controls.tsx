@@ -105,7 +105,7 @@ export function SubjectControls({
       <div className="row" style={{ flexWrap: "wrap", alignItems: "end", gap: 10 }}>
         <label className="lab" style={{ flex: "1 1 100px" }}>Start (seconds)<input className="field" aria-label="Subject beat start" type="number" min="0" max={projectDuration(project)} step="0.1" value={beatStart} onChange={e => setBeatStart(e.target.value)} /></label>
         <label className="lab" style={{ flex: "1 1 100px" }}>End (seconds)<input className="field" aria-label="Subject beat end" type="number" min="0" max={projectDuration(project)} step="0.1" value={beatEnd} onChange={e => setBeatEnd(e.target.value)} /></label>
-        <label className="lab" style={{ flex: "1 1 150px" }}>Beat look<select className="field" aria-label="Subject beat look" value={beatMode} onChange={e => setBeatMode(e.target.value as typeof beatMode)}><option value="sticker">Real subject sticker</option><option value="silhouette">Real subject silhouette</option></select></label>
+        <label className="lab" style={{ flex: "1 1 230px", minWidth: 0 }}>Beat look<select className="field" aria-label="Subject beat look" value={beatMode} onChange={e => setBeatMode(e.target.value as typeof beatMode)}><option value="sticker">Real subject sticker</option><option value="silhouette">Real subject silhouette</option></select></label>
         <button className="btn s g" disabled={busy || !ready} onClick={() => {
           if (!beatStart.trim() || !beatEnd.trim()) { setBeatMessage("Enter both start and end seconds."); return; }
           const next = { ...project, subjectBeats: [...(project.subjectBeats ?? []), { id: makeLocalId("beat"), start: Number(beatStart), end: Number(beatEnd), mode: beatMode }] };
