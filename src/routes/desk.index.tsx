@@ -52,7 +52,7 @@ function Home() {
         </div>
         <div className="dk-panel">
           <div className="dk-label">Your week</div>
-          <div className="dk-week" aria-label="Next seven days">{week.days.map((day,i)=><div key={day.key} aria-current={i===0?"date":undefined}><b>{day.date.toLocaleDateString(undefined,{weekday:"short"})}</b><div style={{fontSize:12,marginTop:4}}>{day.date.toLocaleDateString(undefined,{day:"numeric",month:"short"})}</div><i style={{background:day.topics.length?"var(--blue)":undefined}} /></div>)}</div>
+          <div className="dk-week" aria-label="Next seven days">{week.days.map((day,i)=><div key={day.key} aria-current={i===0?"date":undefined}><b>{day.date.toLocaleDateString(undefined,{weekday:"short"})}</b><div style={{fontSize:12,marginTop:4,minHeight:34,lineHeight:"16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}><span>{day.date.toLocaleDateString(undefined,{month:"short"})}</span><span>{day.date.getDate()}</span></div><i style={{background:day.topics.length?"var(--blue)":undefined}} /></div>)}</div>
           {d.plan && week.start && <p style={{fontSize:13,margin:"12px 0"}}>Plan day 1: {week.start.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})}{week.legacy?" (saved creation date; no start date was stored)":""}. Dates use your device's local time.</p>}
           {d.plan && !week.start && <p style={{fontSize:15}}>This saved plan has no usable start date. Open the plan to view its day-by-day topics. No dates have been changed.</p>}
           {week.days.filter(day=>day.topics.length).map(day=><div key={day.key} style={{marginTop:12}}><div className="dk-label">{day.key===localDate(today)?"Today":day.date.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})} · Day {day.day}</div>{day.topics.map(topic=><Link key={topic.id} to="/desk/plan" style={{display:"block",fontSize:15,marginTop:6}}>{topic.title} <span style={{fontSize:12}}>({names[topic.platform]})</span></Link>)}</div>)}
@@ -64,4 +64,4 @@ function Home() {
       <div className="dk-empty">Videos you script, record, drop in or edit appear here.<br />Nothing is pre-made for you.</div>
     </>
   );
-          }
+}
