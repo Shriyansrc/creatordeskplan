@@ -9,7 +9,7 @@ import { detectSilence, type SilenceRange } from "@/lib/editor/audio";
 import { DIMENSIONS, drawFrame, exportProject, loadCaptionFont } from "@/lib/editor/export";
 import { parseLocalPrompt } from "@/lib/editor/local-prompt";
 import { applyOperations, clipDuration, clipFromAsset, clipStart, createProject, describeOperation, locateTime, projectDuration, wordTimelineTime } from "@/lib/editor/project";
-import { addSessionClips, getSessionClips, saveSessionExport } from "@/lib/editor/session-store";
+import { addSessionClips, clearSessionExport, getSessionClips, saveSessionExport } from "@/lib/editor/session-store";
 import { transcribeClip } from "@/lib/editor/transcribe";
 import type { ClipAsset, EditorClip, EditorProject, PendingEdit, TranscriptWord } from "@/lib/editor/types";
 import { StyleControls } from "@/lib/editor/style-controls";
@@ -335,7 +335,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   };
 
   const doExport = async () => {
-    setError(""); if (exportUrl) URL.revokeObjectURL(exportUrl); setExportUrl(""); setExportName(""); setExporting(true); setExportProgress(0); setExportLabel("Preparing export…"); setPlaying(false);
+    setError(""); clearSessionExport(); window.localStorage.removeItem("cd:export"); if (exportUrl) URL.revokeObjectURL(exportUrl); setExportUrl(""); setExportName(""); setExporting(true); setExportProgress(0); setExportLabel("Preparing export…"); setPlaying(false);
     try {
       const blob = await exportProject(project, assets, transcript, exportFormat, (value, label) => { setExportProgress(value); setExportLabel(label); });
       const name = `creator-desk-${Date.now()}.${exportFormat}`;
@@ -414,4 +414,4 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     {pending && <div className="panel pending-edit" style={{ marginTop: 12 }}><div className="row"><h2>Review the proposed edit</h2><span className="sp" /><span className={"tg " + (pending.source === "ai" ? "r" : "n")}>{pending.source === "ai" ? "Connected AI operations" : "Basic local operations"}</span></div><p>{pending.summary}</p><div className="stack" style={{ margin: "12px 0" }}>{pending.operations.map((operation, index) => <div className="card" key={`${operation.type}-${index}`}>{describeOperation(operation)}</div>)}</div><div className="row" style={{ flexWrap: "wrap" }}><button className="btn" onClick={() => commit(pending.preview)}>Accept edit</button><button className="btn g" onClick={() => setPending(null)}>Reject</button><button className="btn g" onClick={() => { setPrompt(pending.prompt); setPending(null); promptRef.current?.focus(); }}>Tweak prompt</button></div></div>}
     <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div><div className="lab">Real on-device export</div><select className="field" aria-label="Export format" value={exportFormat} onChange={(event) => { if (exportUrl) URL.revokeObjectURL(exportUrl); setExportUrl(""); setExportName(""); setExportLabel(""); setExportProgress(0); setExportFormat(event.target.value as "webm" | "mp4"); }}><option value="webm">WebM</option><option value="mp4">MP4 (local FFmpeg conversion)</option></select></div><span className="sp" /><button className="btn" disabled={exporting || !project.clips.length} onClick={doExport}>Export video</button>{exportUrl && <a className="btn g" href={exportUrl} download={exportName}>Download {exportName.split(".").pop()?.toUpperCase()}</a>}{exportUrl && <button className="btn g" onClick={() => go("publish")}>Continue to publish</button>}</div>{exportLabel && <><div className="bar" style={{ marginTop: 12 }}><i style={{ width: `${Math.round(exportProgress * 100)}%` }} /></div><p className="note">{exportLabel} · {Math.round(exportProgress * 100)}%</p></>}<p className="note">Export renders a new file and never modifies the original. MP4 conversion loads the FFmpeg WebAssembly core from this app on first use; WebM needs no provider.</p></div>
   </div>;
-                             }
+            }
