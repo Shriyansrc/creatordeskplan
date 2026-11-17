@@ -66,7 +66,7 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
       <label className="lab" htmlFor="ref-idea">Your idea</label>
       <input id="ref-idea" className="field" value={idea} onChange={(event) => setIdea(event.target.value)} />
       <p className="note" style={{ margin: "10px 0" }}>
-        Searches selected platforms for YouTube videos and related LinkedIn posts: {platforms.map((p) => NAMES[p]).join(", ")}. No key or pasted links. LinkedIn video playback is not verified. Instagram and X discovery are unresolved. Results are not ranked by performance.
+        Searches the selected platforms: {platforms.map((p) => NAMES[p]).join(", ")}. No key or pasted links. Instagram results are found by web search and may show as a link without a thumbnail. LinkedIn video playback is not verified. X discovery is unresolved. Results are not ranked by performance.
       </p>
       <button className="btn" disabled={busy || idea.trim().length < 2} onClick={() => void runAll()}>
         {busy ? "Searching…" : platforms.some((p) => sections[p]?.done) ? "Search again" : "Find references"}
@@ -140,3 +140,4 @@ function RefCard({ v, saved, onSave }: { v: Found; saved: boolean; onSave: () =>
     </div>
   );
 }
+
