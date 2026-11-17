@@ -133,12 +133,14 @@
  .workspace-editor .editor-header .sub { display:none; }
  .workspace-editor .editor-header .btn { min-height:30px; padding:5px 12px; border-radius:6px; font-size:12px; }
  .workspace-editor .editor-header .btn:not(.g) { background:#0058cc; color:#f7f7f4; }
- .workspace-editor .editor-workspace { grid-template-columns:144px 304px minmax(0,1fr); grid-template-rows:minmax(0,1fr) 154px; grid-template-areas:"tools inspector viewer" "tools inspector timeline"; gap:0; border:1px solid #dcdedb; border-radius:7px; overflow:hidden; background:#efefeb; }
- .workspace-editor .editor-toolbar { display:flex; flex-direction:column; flex-wrap:nowrap; gap:16px; padding:18px 10px; overflow-y:auto; background:#efefeb; border-right:1px solid #dcdedb; }
+ .workspace-editor .editor-workspace { grid-template-columns:78px 304px minmax(0,1fr); grid-template-rows:minmax(0,1fr) 154px; grid-template-areas:"tools inspector viewer" "tools inspector timeline"; gap:0; border:1px solid #dcdedb; border-radius:7px; overflow:hidden; background:#efefeb; }
+ .workspace-editor .editor-toolbar { display:flex; flex-direction:column; flex-wrap:nowrap; gap:14px; padding:14px 6px; overflow-y:auto; background:#efefeb; border-right:1px solid #dcdedb; }
  .workspace-editor .tool-group { display:flex; flex-direction:column; gap:3px; }
- .workspace-editor .tool-group>span { font-size:12px; color:#777b75; margin:0 8px 5px; text-transform:uppercase; letter-spacing:.07em; }
- .workspace-editor .editor-toolbar button { flex:none; min-height:33px; width:100%; text-align:left; padding:6px 9px; font-size:13px; background:transparent; border:0; border-radius:5px; color:#464c49; }
- .workspace-editor .editor-toolbar button.on { background:#dcdfd7; color:#222c27; font-weight:600; }
+ .workspace-editor .tool-group>span { font-size:9px; color:#777b75; margin:0 0 4px; text-transform:uppercase; letter-spacing:.07em; text-align:center; }
+ .workspace-editor .editor-toolbar button { flex:none; display:flex; flex-direction:column; align-items:center; gap:4px; min-height:0; width:100%; text-align:center; padding:7px 2px; font-size:10px; line-height:1.15; background:transparent; border:0; border-radius:8px; color:#464c49; }
+ .workspace-editor .editor-toolbar button svg { display:block; width:20px; height:20px; }
+ .workspace-editor .editor-toolbar button em { font-style:normal; }
+ .workspace-editor .editor-toolbar button.on { background:#e4e7e2; color:#222c27; font-weight:600; }
  .workspace-editor .editor-viewer { display:contents; }
  .workspace-editor .estage { grid-area:viewer; background:#e5e6e2; min-width:0; padding:18px 20px 8px; gap:10px; }
  .workspace-editor .editor-phone { border-radius:3px; max-height:calc(100% - 35px); box-shadow:none; }
@@ -183,7 +185,7 @@
 .timeline-words { min-width:0; }
 
 @media(min-width:821px) {
- .workspace-editor .timeline-words { position:relative; overflow:visible; margin-bottom:7px; }
+ .workspace-editor .timeline-words { position:relative; overflow:hidden; margin-bottom:7px; }
  .workspace-editor .timeline-words button { position:absolute; top:0; height:27px; padding:3px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
  .workspace-editor .inspector-heading + .editor-target { margin-top:0; }
 }
@@ -196,7 +198,7 @@
  .workspace-editor .estage { background:#e9ecf1; }
  .workspace-editor .editor-toolbar button { color:#475467; }
  .workspace-editor .tool-group>span { color:#667085; font-weight:600; }
- .workspace-editor .editor-toolbar button.on { background:#0058cc; color:#fff; }
+ .workspace-editor .editor-toolbar button.on { background:#eef4ff; color:#0058cc; }
  .workspace-editor .btn:not(.g) { background:#0058cc; color:#fff; border-color:#0058cc; }
  .workspace-editor .btn.g,.workspace-editor .chip { background:#f2f4f7; color:#344054; border-color:#e4e7ec; }
  .workspace-editor .chip.on { background:#eef4ff; color:#0058cc; border-color:#b2ccff; }
@@ -263,4 +265,4 @@
  .workspace-editor .editor-export .row>.sp { display:none; }
  .workspace-editor .reference-preview { margin-top:10px; }
  .workspace-editor .reference-preview summary { min-height:24px; font-size:12px; }
-}
+                                          }
