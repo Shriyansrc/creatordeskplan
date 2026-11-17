@@ -100,6 +100,7 @@ export const scriptInputSchema = z.object({
   current: z.record(z.string(), z.string().max(10000)).optional(),
   instruction: z.string().max(2000).optional(),
   styleNotes: z.string().max(2000).optional(),
+  language: z.string().max(40).optional(),
 });
 export type ScriptInput = z.infer<typeof scriptInputSchema>;
 
