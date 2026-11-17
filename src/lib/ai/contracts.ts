@@ -23,7 +23,7 @@ export const researchSchema = z.object({
     activeTimes: z.string().max(300),
     painPoints: z
       .array(z.object({ title: z.string().min(1).max(300), detail: z.string().max(800), sourceIds: z.array(z.number().int()).max(6).optional() }))
-      .min(1)
+      .min(0)
       .max(12),
     searches: z
       .array(
