@@ -12,8 +12,9 @@ export function useAuth() {
       setUser(session?.user ?? null);
       setReady(true);
     });
-    supabase.auth.getUser().then(({ data: d }) => {
-      setUser(d.user ?? null);
+    // Read the stored session locally. getUser() made a network call on every page that used this hook.
+    supabase.auth.getSession().then(({ data: d }) => {
+      setUser(d.session?.user ?? null);
       setReady(true);
     });
     return () => data.subscription.unsubscribe();
