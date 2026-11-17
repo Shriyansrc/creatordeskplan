@@ -14,7 +14,7 @@ function Niche() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [refine, setRefine] = useState<string[]>([]);
-  const aud = p.audience || p.audienceNotes;
+  const aud = [p.audience, p.audienceNotes].filter(Boolean).join(" | ");
   const key = `${p.topic}||${aud}||${p.goal}||${p.language}`;
   const run = async (r: string[]) => {
     setBusy(true);

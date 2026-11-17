@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Platform } from "@/lib/ai/contracts";
 import { ALL_PLATFORMS } from "@/lib/creator-shared";
 import { SetupFrame, PlatLogo, Spinner } from "@/desk/ui";
-import { CAMERA, GOALS, LANGUAGES, PLATFORM_COPY, TOOLS, getDesk, hoursLabel, patchDesk, patchProfile, useDesk } from "@/desk/store";
+import { CAMERA, GOALS, LANGUAGES, OTHER_LANGUAGES, PLATFORM_COPY, TOOLS, getDesk, hoursLabel, patchDesk, patchProfile, useDesk } from "@/desk/store";
 import { errorText, suggestAudiences, suggestGoals, suggestPlatforms, suggestTopics } from "@/desk/api";
 
 export const Route = createFileRoute("/setup")({
@@ -212,6 +212,8 @@ function TopicStep() {
   );
 }
 
+const SEP = " | ";
+
 function AudienceStep() {
   const { profile: p, audienceSuggestions: s } = useDesk();
   const key = `${p.topic}||${p.goal}`;
@@ -236,9 +238,10 @@ function AudienceStep() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   const items = s?.key === key ? s.items : [];
+  const chosen = p.audience ? p.audience.split(SEP).filter(Boolean) : [];
   return (
     <>
-      <Head no="03 / Your audience" title="Who should watch?" intro="You don't need to know your audience beforehand. We suggest audiences from your topic, with their pain points. You pick or edit." />
+      <Head no="03 / Your audience" title="Who should watch?" intro="You don't need to know your audience beforehand. We suggest audiences from your topic, with their pain points. Pick one or more, or write your own." />
       <div className="dk-g2" style={{ alignItems: "start" }}>
         <div>
           {busy && <div className="dk-empty"><Spinner /> Finding audiences for "{p.topic}"...</div>}
@@ -248,19 +251,23 @@ function AudienceStep() {
             {items.map((a) => (
               <Pick
                 key={a.name}
-                sel={p.audience === a.name}
-                onClick={() => patchProfile({ audience: a.name, audienceNotes: "", painPoints: a.painPoints.map((x) => x.title) })}
+                sel={chosen.includes(a.name)}
+                onClick={() => {
+                  const next = chosen.includes(a.name) ? chosen.filter((x) => x !== a.name) : [...chosen, a.name];
+                  const picked = items.filter((x) => next.includes(x.name));
+                  const pains = Array.from(new Set(picked.flatMap((x) => x.painPoints.map((y) => y.title))));
+                  patchProfile({ audience: next.join(SEP), painPoints: pains });
+                }}
                 title={a.name}
                 text={a.why}
                 mini={a.painPoints.map((x) => x.title).join(" · ")}
               />
             ))}
           </div>
-          {items.length > 0 && <div className="dk-tag est" style={{ marginTop: 12 }}>AI ESTIMATE, NOT RESEARCH YET</div>}
         </div>
         <div>
-          <div className="dk-label">Prefer to describe your own?</div>
-          <textarea className="dk-field" value={p.audienceNotes} onChange={(e) => patchProfile({ audienceNotes: e.target.value, ...(e.target.value ? { audience: "", painPoints: [] } : {}) })} placeholder="Write who you want to reach..." />
+          <div className="dk-label">Add your own viewers</div>
+          <textarea className="dk-field" value={p.audienceNotes} onChange={(e) => patchProfile({ audienceNotes: e.target.value })} placeholder="Add your own viewers, in addition to any you picked..." />
           <p style={{ fontSize: 15, marginTop: 10 }}>Either way, pain points are researched and shown with their sources before your plan uses them.</p>
         </div>
       </div>
@@ -279,7 +286,7 @@ function PlatformStep() {
     setBusy(true);
     setErr("");
     try {
-      const r = await suggestPlatforms(`${p.goal}. Audience: ${p.audience || p.audienceNotes}`, p.topic);
+      const r = await suggestPlatforms(`${p.goal}. Audience: ${[p.audience, p.audienceNotes].filter(Boolean).join(" | ")}`, p.topic);
       patchProfile({ aiPlatforms: true, platforms: r.recommendations.map((x) => x.platform), platformReasons: r.recommendations });
     } catch (e) {
       setErr(errorText(e));
@@ -336,7 +343,12 @@ function TimeStep() {
           <div className="dk-label">On camera?</div>
           <div className="dk-chips">{CAMERA.map((t) => <button key={t} type="button" className={`dk-chip${p.camera === t ? " sel" : ""}`} onClick={() => patchProfile({ camera: t })}>{t}</button>)}</div>
           <div className="dk-label" style={{ marginTop: 26 }}>Language & voice</div>
-          <div className="dk-chips">{LANGUAGES.map((t) => <button key={t} type="button" className={`dk-chip${p.language === t ? " sel" : ""}`} onClick={() => patchProfile({ language: t })}>{t}</button>)}</div>
+          <div className="dk-chips">{LANGUAGES.map((t) => <button key={t} type="button" className={`dk-chip${p.language === t ? " sel" : ""}`} onClick={() => patchProfile({ language: t })}>{t}</button>)}
+            <select className={`dk-chip${p.language && !(LANGUAGES as readonly string[]).includes(p.language) ? " sel" : ""}`} aria-label="Select other language" value={p.language && !(LANGUAGES as readonly string[]).includes(p.language) ? p.language : ""} onChange={(e) => { if (e.target.value) patchProfile({ language: e.target.value }); }}>
+              <option value="">Select other</option>
+              {OTHER_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
           <div className="dk-panel" style={{ marginTop: 26 }}>
             <div className="dk-label">Your script style</div>
             <p>{p.language && p.camera ? `Scripts will be written in ${p.language}, for ${p.camera.toLowerCase()}.` : "Pick a language and how you appear. Nothing is pre-set."}</p>
@@ -353,7 +365,7 @@ function Done({ go }: { go: (n: number) => void }) {
   const rows: [string, string, number][] = [
     ["Goal", p.goal, 1],
     ["Topic", p.topic, 2],
-    ["Audience", p.audience || p.audienceNotes, 3],
+    ["Audience", [p.audience, p.audienceNotes].filter(Boolean).join(" | "), 3],
     ["Platforms", p.platforms.map((x) => PLATFORM_COPY[x].name).join(", "), 4],
     ["Time", [hoursLabel(p.hours), p.camera].filter(Boolean).join(", "), 5],
     ["Language", p.language, 5],

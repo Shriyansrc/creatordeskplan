@@ -16,7 +16,7 @@ function Settings() {
   const rows: [string, string, number][] = [
     ["Goal", p.goal, 1],
     ["Topic", p.topic, 2],
-    ["Audience", p.audience || p.audienceNotes, 3],
+    ["Audience", [p.audience, p.audienceNotes].filter(Boolean).join(" | "), 3],
     ["Platforms", p.platforms.map((x) => PLATFORM_COPY[x].name).join(", "), 4],
     ["Time", [hoursLabel(p.hours), p.camera].filter(Boolean).join(", "), 5],
     ["Language", p.language, 5],

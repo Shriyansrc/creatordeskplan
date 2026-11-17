@@ -15,6 +15,12 @@ export const Route = createFileRoute("/desk/plan")({ component: Plan });
 const PNAME: Record<Platform, string> = { ig: "Instagram", yt: "YouTube", li: "LinkedIn", x: "X" };
 const TABS = ["Research", "30-day plan", "Script"] as const;
 
+function Cite({ ids, list }: { ids?: number[] | undefined; list?: { id: number; url: string; site: string }[] | undefined }) {
+  const found = (ids ?? []).map((i) => list?.find((x) => x.id === i)).filter((x): x is { id: number; url: string; site: string } => !!x);
+  if (!found.length) return null;
+  return <p style={{ marginTop: 6, fontSize: 14 }}>Sources: {found.map((x, i) => <span key={x.id}>{i ? ", " : ""}<a href={x.url} target="_blank" rel="noreferrer" style={{ color: "var(--blue)" }}>{x.id} ({x.site})</a></span>)}</p>;
+}
+
 function searchUrl(p: string, q: string) {
   const e = encodeURIComponent(q);
   if (p === "yt") return `https://www.youtube.com/results?search_query=${e}`;
@@ -66,7 +72,7 @@ function Plan() {
   const script = topic ? d.scripts[topic.id] : undefined;
   const doScript = (instruction?: string) => run("script", async () => {
     if (!topic) return;
-    const r = await runScript({ topic: topic.title, niche, goal: p.goal, platform: topic.platform, painPoint: topic.painPoint, researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
+    const r = await runScript({ topic: topic.title, niche, goal: p.goal, platform: topic.platform, painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
     patchDesk({ scripts: { ...d.scripts, [topic.id]: { data: r, at: new Date().toISOString() } } });
   });
 
@@ -85,18 +91,25 @@ function Plan() {
             <button type="button" className="dk-btn" disabled={busy !== ""} onClick={() => void doResearch()}>{busy === "research" ? <Spinner /> : null}{research ? "Run research again" : "Run research"}</button>
             {research && <button type="button" className="dk-btn secondary" disabled={busy !== ""} onClick={() => void doPlan()}>{busy === "plan" ? <Spinner /> : null}{plan ? "Rebuild 30-day plan" : "Build my 30-day plan"}</button>}
           </div>
-          {!research && busy !== "research" && <div className="dk-empty"><b>Research appears here</b>Audience, pain points, search phrases, keywords and reference video ideas for "{niche}". All of it is an AI estimate until you check it.</div>}
+          {!research && busy !== "research" && <div className="dk-empty"><b>Research appears here</b>Audience, pain points, search phrases, keywords and reference video ideas for "{niche}". It is built from live sources fetched when you run it, and every item links to what it came from. If the sources cannot be reached, you get an error, not a guess.</div>}
           {busy === "research" && <div className="dk-empty"><Spinner /> Researching your niche...</div>}
           {research && (
             <div className="dk-list">
-              <div className="dk-item"><span className="dk-tag est">AI ESTIMATE</span><h3 style={{ marginTop: 8 }}>Niche summary</h3><p>{research.nicheSummary}</p></div>
+              <div className="dk-item"><span className="dk-tag">{research.sources?.length ? `FROM ${research.sources.length} LIVE SOURCES` : "OLD RESULT, NO SOURCES. RUN RESEARCH AGAIN"}</span><h3 style={{ marginTop: 8 }}>Niche summary</h3><p>{research.nicheSummary}</p></div>
               <div className="dk-item"><h3>Audience</h3><p>{research.audience.profile}</p><p style={{ marginTop: 6 }}>{[research.audience.age, research.audience.location, research.audience.activeTimes].filter(Boolean).join(" · ")}</p></div>
               <div className="dk-label" style={{ marginTop: 14 }}>Pain points</div>
-              {research.audience.painPoints.map((x) => <div key={x.title} className="dk-item"><h3>{x.title}</h3><p>{x.detail}</p></div>)}
+              {research.audience.painPoints.map((x) => <div key={x.title} className="dk-item"><h3>{x.title}</h3><p>{x.detail}</p><Cite ids={x.sourceIds} list={research.sources} /></div>)}
               <div className="dk-label" style={{ marginTop: 14 }}>What they search</div>
-              {research.audience.searches.map((x) => <div key={x.phrase} className="dk-item"><h3>{x.phrase}</h3><p>{x.intent} · {x.platform}</p></div>)}
+              {research.audience.searches.map((x) => <div key={x.phrase} className="dk-item"><h3>{x.phrase}</h3><p>{x.intent} · {x.platform}</p><Cite ids={x.sourceIds} list={research.sources} /></div>)}
               <div className="dk-label" style={{ marginTop: 14 }}>Keywords</div>
-              {research.keywords.map((x) => <div key={x.keyword} className="dk-item"><h3>{x.keyword}</h3><p>{x.reason}</p></div>)}
+              {research.keywords.map((x) => <div key={x.keyword} className="dk-item"><h3>{x.keyword}</h3><p>{x.reason}</p><Cite ids={x.sourceIds} list={research.sources} /></div>)}
+              <div className="dk-label" style={{ marginTop: 14 }}>Sources checked{research.checkedAt ? ` · ${new Date(research.checkedAt).toLocaleString()}` : ""}</div>
+              {(research.sources ?? []).map((x) => (
+                <div key={x.id} className="dk-item">
+                  <h3>{x.id}. <a href={x.url} target="_blank" rel="noreferrer" style={{ color: "var(--blue)" }}>{x.title}</a></h3>
+                  <p>{x.site}{x.snippet ? ` · ${x.snippet}` : ""}</p>
+                </div>
+              ))}
               <div className="dk-label" style={{ marginTop: 14 }}>Reference ideas</div>
               {research.referenceIdeas.map((x) => (
                 <div key={x.title} className="dk-item">
