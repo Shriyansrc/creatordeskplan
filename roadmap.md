@@ -11,3 +11,4 @@
 - [x] Reel job contract, local service, docs and SQL file (not applied).
 - [x] Apply local talking-head rules in the editor, share preview/export rendering, and verify timing, silence tails, and undo.
 - [x] Correct Font caption timing/case and add browser-only SFX, keyword highlights, optional fisheye and music; verify real-speech WebM frames/audio and exact undo.
+- [x] Secure reference search with verified sessions and atomic backend quotas; migration applied to existing backend, real auth/RPC verified, exact SQL concurrency/caps tested in temporary PostgreSQL, and creator rows/policies unchanged.

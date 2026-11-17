@@ -32,12 +32,33 @@ export type Database = {
         }
         Relationships: []
       }
+      reference_search_quota: {
+        Row: {
+          id: number
+          reserved_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: never
+          reserved_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: never
+          reserved_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reserve_reference_search: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

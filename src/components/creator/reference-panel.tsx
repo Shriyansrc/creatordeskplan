@@ -5,6 +5,8 @@ import { nicheLabel, type StudioShared } from "@/lib/creator-shared";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import { useDesk } from "@/desk/store";
 import { PlatformMark } from "./platform-mark";
+import { supabase } from "@/integrations/supabase/client";
+import { GoogleButton } from "./google-button";
 
 type Found = WebVideo & { why?: string };
 type Section = { loading: boolean; error: string; supported: boolean; note: string; videos: Found[]; cached: boolean; done: boolean };
@@ -21,6 +23,7 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
   const [idea, setIdea] = useState(prefill);
   useEffect(() => setIdea(prefill), [prefill]);
   const [sections, setSections] = useState<Partial<Record<WebPlatform, Section>>>({});
+  const [needsSignIn, setNeedsSignIn] = useState(false);
   const [saved, setSaved] = usePersistentState<Found[]>("saved-refs2", []);
   const niche = nicheLabel(st);
   const busy = platforms.some((p) => sections[p]?.loading);
@@ -28,12 +31,20 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
   const run = async (platform: WebPlatform) => {
     setSections((s) => ({ ...s, [platform]: { ...EMPTY, loading: true } }));
     try {
+      const { data, error } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (error || !token) {
+        setNeedsSignIn(true);
+        throw new Error("Sign in to search references.");
+      }
+      setNeedsSignIn(false);
       const response = await fetch("/api/ai/references", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
         body: JSON.stringify({ idea, niche, platform }),
       });
       const body = (await response.json()) as { error?: string; supported?: boolean; note?: string; videos?: Found[]; cached?: boolean };
+      if (response.status === 401) setNeedsSignIn(true);
       if (!response.ok || body.error) throw new Error(body.error ?? `Search failed with HTTP ${response.status}`);
       setSections((s) => ({ ...s, [platform]: { loading: false, error: "", supported: body.supported !== false, note: body.note ?? "", videos: body.videos ?? [], cached: !!body.cached, done: true } }));
     } catch (cause) {
@@ -60,6 +71,7 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
       <button className="btn" disabled={busy || idea.trim().length < 2} onClick={() => void runAll()}>
         {busy ? "Searching…" : platforms.some((p) => sections[p]?.done) ? "Search again" : "Find references"}
       </button>
+      {needsSignIn && <GoogleButton label="Sign in to search references" />}
       {platforms.map((p) => {
         const sec = sections[p];
         if (!sec) return null;
