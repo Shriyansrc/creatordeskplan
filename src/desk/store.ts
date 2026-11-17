@@ -3,6 +3,7 @@ import type { AudienceResult, NichesResult, Platform, PlanResult, ResearchResult
 
 export type Profile = {
   goal: string;
+  purpose: string;
   topic: string;
   audience: string;
   audienceNotes: string;
@@ -30,6 +31,7 @@ export type DeskState = {
 
 export const EMPTY_PROFILE: Profile = {
   goal: "",
+  purpose: "",
   topic: "",
   audience: "",
   audienceNotes: "",
@@ -120,4 +122,4 @@ export const PLATFORM_COPY: Record<Platform, { name: string; line: string }> = {
 export function hoursLabel(h: number) {
   if (h <= 0) return "";
   return h >= 10 ? "10+ hours a week" : `${h} hour${h === 1 ? "" : "s"} a week`;
-}
+  }
