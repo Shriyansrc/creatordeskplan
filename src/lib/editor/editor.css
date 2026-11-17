@@ -1,20 +1,10 @@
+@import url("./caption-font-impact.css");
+@import url("./caption-font-script.css");
 @font-face {
   font-family: "CDCaption";
   src: url("./poppins-extrabold-italic.ttf") format("truetype");
   font-weight: 800;
   font-style: italic;
-  font-display: block;
-}
-@font-face {
-  font-family: "CDImpact";
-  src: url("./anton-regular.ttf") format("truetype");
-  font-weight: 400;
-  font-display: block;
-}
-@font-face {
-  font-family: "CDScript";
-  src: url("./dancing-script-bold.ttf") format("truetype");
-  font-weight: 700;
   font-display: block;
 }
 .talking-head-editor {
@@ -273,4 +263,4 @@
  .workspace-editor .editor-export .row>.sp { display:none; }
  .workspace-editor .reference-preview { margin-top:10px; }
  .workspace-editor .reference-preview summary { min-height:24px; font-size:12px; }
-  }
+}
