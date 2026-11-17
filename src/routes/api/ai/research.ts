@@ -23,6 +23,7 @@ export const Route = createFileRoute("/api/ai/research")({
       POST: async ({ request }) => {
         const settings = settingsFromEnv(process.env);
         if (!providerIsConfigured(settings)) return Response.json({ connected: false, reason: "AI provider not configured" }, { status: 503 });
+        if (!/^Bearer\s+\S+$/i.test(request.headers.get("authorization") ?? "")) return Response.json({ error: "Sign in to use AI generation." }, { status: 401 });
         let input;
         try { input = researchInputSchema.parse(await request.json()); }
         catch { return Response.json({ connected: true, error: "Invalid research request" }, { status: 400 }); }
