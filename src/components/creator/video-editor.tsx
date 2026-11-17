@@ -12,16 +12,18 @@ import { detectSilence, type SilenceRange } from "@/lib/editor/audio";
 import { DIMENSIONS, drawFrame, exportProject, loadCaptionFont } from "@/lib/editor/export";
 import { parseLocalPrompt } from "@/lib/editor/local-prompt";
 import { applyOperations, clipDuration, clipFromAsset, clipStart, createProject, describeOperation, locateTime, projectDuration, wordTimelineTime } from "@/lib/editor/project";
+import { CAPTION_FONT_OPTIONS, captionDefaultFont } from "@/lib/editor/caption-font";
+import { CaptionPreview } from "@/lib/editor/caption-preview";
 import { addSessionClips, clearSessionExport, getSessionClips, saveSessionExport } from "@/lib/editor/session-store";
 import { transcribeClip } from "@/lib/editor/transcribe";
-import type { ClipAsset, EditorClip, EditorProject, PendingEdit, TranscriptWord } from "@/lib/editor/types";
+import type { CaptionStyle, ClipAsset, EditorClip, EditorProject, PendingEdit, TranscriptWord } from "@/lib/editor/types";
 import { StyleControls } from "@/lib/editor/style-controls";
 import { prepareSoundtrack, type Soundtrack } from "@/lib/editor/soundtrack";
 import { applyTalkingHeadStyle, NOT_AVAILABLE, type StyleResult } from "@/lib/editor/talking-head";
 import "@/lib/editor/editor.css";
 import { usePersistentState } from "@/lib/use-persistent-state";
 
-const TOOLS = ["Media", "Reference", "Trim", "Transcript", "Captions", "Crop", "Colour", "Style", "Engage", "Sound", "Motion", "Subject"] as const;
+const TOOLS = ["AI", "Media", "Reference", "Trim", "Transcript", "Captions", "Crop", "Colour", "Style", "Engage", "Sound", "Motion", "Subject"] as const;
 const RATIOS = ["9:16", "1:1", "4:5", "16:9"] as const;
 
 function formatTime(value: number) {
@@ -49,7 +51,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const [dropOver, setDropOver] = useState(false);
   const [pending, setPending] = useState<PendingEdit | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [promptMode, setPromptMode] = useState<"basic" | "ai">("basic");
+  const [promptMode, setPromptMode] = useState<"basic" | "ai">("ai");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [playhead, setPlayhead] = useState(0);
@@ -65,9 +67,11 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const history = useRef<EditorProject[]>([]);
   const future = useRef<EditorProject[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const promptRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
   const frameRef = useRef(0);
   const dragRef = useRef<{ pointer: number; x: number; y: number; cropX: number; cropY: number } | null>(null);
+
+  useEffect(() => { if (connection.state === "not-connected") setPromptMode("basic"); }, [connection.state]);
 
   const view = pending?.preview ?? project;
   const location = locateTime(view, playhead);
@@ -354,12 +358,57 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     commitOperations([{ type: "color", clipId: selected.id, [key]: value }]);
   };
 
+  const setCaption = (patch: Partial<CaptionStyle>) => {
+    remember();
+    setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, ...patch } }));
+  };
+
+  const cutAtPlayhead = () => {
+    if (activeClip && location) commitOperations([{ type: "split", clipId: activeClip.id, at: location.sourceTime }]);
+  };
+  const deleteSelectedClip = () => {
+    if (selected) commitOperations([{ type: "delete", clipId: selected.id }]);
+  };
+
+  // One-time move of untouched old default captions to the impact base style.
+  useEffect(() => {
+    if (!projectReady) return;
+    setProject((current) => {
+      const style = current.captionStyle;
+      if (style.preset === "owner" && style.size === 58 && style.color === "#F4F1EA" && style.position === 50 && style.font === undefined) {
+        return { ...current, captionStyle: { ...style, preset: "impact", font: "script", impactFont: "anton", impactColor: "#E8443A", outline: 0, shadow: 4, animation: "pop" } };
+      }
+      return current;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectReady]);
+
+  // Conventional timeline editing keys: Delete/Backspace removes the selected section.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) return;
+      if ((event.key === "Delete" || event.key === "Backspace") && selected) {
+        event.preventDefault();
+        commitOperations([{ type: "delete", clipId: selected.id }]);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id, project]);
+
+  const scrubTo = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    seek(((event.clientX - rect.left) / rect.width) * totalDuration);
+  };
+
   return <div className="talking-head-editor workspace-editor">
     <header className="editor-header"><div><h1>Edit your video</h1><p className="sub">Your footage. Reversible edits.</p></div><div className="row"><button className="btn s g" onClick={undo} disabled={!history.current.length}>Undo</button><button className="btn s g" onClick={redo} disabled={!future.current.length}>Redo</button><button className="btn s" onClick={doExport} disabled={exporting || Boolean(busy) || !project.clips.length}>Save video</button></div></header>
     {busy && <p className="editor-message" role="status">{busy}</p>}
     {error && <div className="notice editor-message" role="alert">{error}</div>}
     <div className="ed editor-workspace">
-      <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{([['Footage',['Media','Reference','Trim','Crop']],['Words',['Transcript','Captions','Engage']],['Look',['Style','Colour','Motion','Subject']],['Audio',['Sound']]] as const).map(([group,tools])=><div className="tool-group" key={group}><span>{group}</span>{tools.map(tool=><button key={tool} className={st.tool===tool?'on':''} onClick={()=>set({tool})}>{tool==='Engage'?'Text & hook':tool==='Sound'?'Music & sound':tool}</button>)}</div>)}</nav>
+      <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{([['Assist',['AI']],['Footage',['Media','Reference','Trim','Crop']],['Words',['Transcript','Captions','Engage']],['Look',['Style','Colour','Motion','Subject']],['Audio',['Sound']]] as const).map(([group,tools])=><div className="tool-group" key={group}><span>{group}</span>{tools.map(tool=><button key={tool} className={st.tool===tool?'on':''} onClick={()=>set({tool})}>{tool==='Engage'?'Text & hook':tool==='Sound'?'Music & sound':tool}</button>)}</div>)}</nav>
       <section className="editor-viewer" aria-label="Video and timeline">
         <div className="estage">
           <div className="phone editor-phone" style={{ aspectRatio: view.ratio.replace(":", "/") }} onPointerDown={(event) => {
@@ -381,9 +430,20 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
           <div className="eratio">{RATIOS.map((ratio) => <button key={ratio} className={"chip" + (view.ratio === ratio ? " on" : "")} onClick={() => commitOperations([{ type: "crop", ratio }])}>{ratio}</button>)}<span className="sp" /><span style={{ fontSize: 12 }}>{formatTime(playhead)} / {formatTime(totalDuration)}</span></div>
         </div>
         <div className="tl editor-timeline">
-          <div className="timeline-ruler" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); seek(((event.clientX - rect.left) / rect.width) * totalDuration); }}><span style={{ left: `${totalDuration ? playhead / totalDuration * 100 : 0}%` }} /></div>
+          <div className="timeline-transport">
+            <button className="transport-btn" aria-label={playing ? "Pause preview" : "Play preview"} onClick={togglePlayback} disabled={Boolean(busy) || exporting || !project.clips.length}>{playing ? "Pause" : "Play"}</button>
+            <span className="transport-time">{formatTime(playhead)} / {formatTime(totalDuration)}</span>
+            <span className="sp" />
+            <button className="transport-btn cut" onClick={cutAtPlayhead} disabled={!activeClip || !location || exporting} title="Split the current clip at the playhead">Cut here</button>
+            <button className="transport-btn" onClick={deleteSelectedClip} disabled={!selected || exporting} title="Remove the selected section from the video">Delete section</button>
+          </div>
+          <div className="timeline-body">
+          <div className="timeline-ruler" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); scrubTo(event); }} onPointerMove={(event) => { if (event.buttons) scrubTo(event); }}><span style={{ left: `${totalDuration ? playhead / totalDuration * 100 : 0}%` }} /></div>
           <div className="strip editor-strip">{view.clips.map((clip, index) => { const asset = assets.find((item) => item.sourceId === clip.sourceId); const original = project.clips.find((item) => item.id === clip.id); return <button key={clip.id} className={"timeline-clip" + (selected?.id === clip.id ? " selected" : "") + (pending && !original ? " changed" : "")} style={{ flexGrow: Math.max(1, clipDuration(clip)) }} onClick={() => { setSelectedId(clip.id); seek(clipStart(view, clip.id)); }}><span>{index + 1}. {clip.name}</span>{asset ? <video src={`${asset.url}#t=${clip.trimIn}`} muted preload="metadata" aria-hidden="true" /> : <i>File needed</i>}<small>{clip.trimIn.toFixed(1)}–{clip.trimOut.toFixed(1)}s · {clip.speed}x</small></button>; })}</div>
-          <div className="timeline-words" aria-label="Caption word track">{transcript.filter(word => wordTimelineTime(view,word)!==null).map(word => <button key={word.id} style={{left:`${(wordTimelineTime(view,word)??0)/Math.max(.001,totalDuration)*100}%`,width:`${(word.end-word.start)/Math.max(.001,totalDuration)*100}%`}} title={`${word.word}: ${word.start.toFixed(2)} to ${word.end.toFixed(2)} seconds source time`} onClick={() => { set({tool:"Transcript"}); const time=wordTimelineTime(view,word); if(time!==null)seek(time); }}>{word.word}</button>)}</div><div className="capbar">Caption track: {view.captionsEnabled ? `${transcript.length} transcribed words` : "off"}</div>
+          <div className="timeline-words" aria-label="Caption word track">{transcript.filter(word => wordTimelineTime(view,word)!==null).map(word => <button key={word.id} style={{left:`${(wordTimelineTime(view,word)??0)/Math.max(.001,totalDuration)*100}%`,width:`${(word.end-word.start)/Math.max(.001,totalDuration)*100}%`}} title={`${word.word}: ${word.start.toFixed(2)} to ${word.end.toFixed(2)} seconds source time`} onClick={() => { set({tool:"Transcript"}); const time=wordTimelineTime(view,word); if(time!==null)seek(time); }}>{word.word}</button>)}</div>
+          {totalDuration > 0 && <div className="playhead-line" aria-hidden="true" style={{ left: `${playhead / totalDuration * 100}%` }}><i /></div>}
+          </div>
+          <div className="capbar">Caption track: {view.captionsEnabled ? `${transcript.length} transcribed words` : "off"}</div>
           <div className="audio-track">Audio track · {view.clips.filter((clip) => clip.muted).length} muted clips</div>
           {pending && <div className="pending-track">Proposed edit preview, not applied yet</div>}
         </div>
@@ -391,9 +451,38 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       <aside className="editor-inspector" aria-label="Active editing controls" tabIndex={0}><div className="inspector-heading"><h2>{st.tool === "Engage" ? "Text & hook" : st.tool === "Sound" ? "Music & sound" : st.tool}</h2></div>
         <p className="editor-target">{selected ? `Editing: ${selected.name}` : "Add your footage to start"}</p>
         <div className="panel">
+          {st.tool === "AI" && <div className="ai-panel">
+            <p className="note">Tell the editor what to change in your own words. It proposes a change list first - you apply or reject it. Nothing silently changes.</p>
+            <textarea ref={promptRef} className="field ai-input" rows={4} aria-label="Tell the AI how to edit the video" placeholder="For example: cut the silences, make it brighter, add captions" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void previewPrompt(); } }} />
+            <div className="row" style={{ marginTop: 10, flexWrap: "wrap" }}><div className="nav"><button className={promptMode === "ai" ? "on" : ""} onClick={() => setPromptMode("ai")} disabled={connection.state !== "connected"}>AI</button><button className={promptMode === "basic" ? "on" : ""} onClick={() => setPromptMode("basic")}>Basic local mode</button></div><span className="tg n">{promptMode === "basic" ? "Basic, runs in your browser" : connection.state === "connected" ? "Connected" : "Not connected"}</span></div>
+            {promptMode === "ai" && connection.state !== "connected" && <p className="note">{NOT_CONNECTED_COPY}</p>}
+            <button className="btn" style={{ marginTop: 10 }} disabled={Boolean(busy) || !prompt.trim() || (promptMode === "ai" && connection.state !== "connected")} onClick={previewPrompt}>Propose edit</button>
+          </div>}
           {st.tool === "Media" && <div><label className="btn g s">Import clips<input type="file" accept="video/*" multiple hidden onChange={(event) => void importFiles(Array.from(event.target.files ?? []))} /></label><p className="note">{project.clips.length} clips on the timeline. Session files stay on this device.</p></div>}
           {st.tool === "Trim" && selected && <div className="stack"><div className="row"><button className="btn s g" onClick={() => activeClip && location && commitOperations([{ type: "split", clipId: activeClip.id, at: location.sourceTime }])}>Split at playhead</button><button className="btn s g" onClick={() => commitOperations([{ type: "delete", clipId: selected.id }])}>Delete clip</button></div><div className="row"><button className="btn s g" disabled={view.clips.indexOf(selected) <= 0} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) - 1 }])}>Move earlier</button><button className="btn s g" disabled={view.clips.indexOf(selected) >= view.clips.length - 1} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) + 1 }])}>Move later</button></div><label className="lab">Trim in, seconds<input key={`${selected.id}-in-${selected.trimIn}`} className="field" type="number" min={0} max={selected.trimOut - 0.05} step={0.1} defaultValue={selected.trimIn} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: Number(event.target.value), end: selected.trimOut }])} /></label><label className="lab">Trim out, seconds<input key={`${selected.id}-out-${selected.trimOut}`} className="field" type="number" min={selected.trimIn + 0.05} max={selected.sourceDuration} step={0.1} defaultValue={selected.trimOut} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: selected.trimIn, end: Number(event.target.value) }])} /></label><label className="lab">Speed: {selected.speed.toFixed(2)}x<input type="range" min={0.25} max={4} step={0.05} value={selected.speed} onChange={(event) => commitOperations([{ type: "speed", clipId: selected.id, value: Number(event.target.value) }])} /></label><button className="btn s g" onClick={previewSilence}>Preview silence removal</button></div>}
-          {st.tool === "Captions" && <div><label className="row"><input type="checkbox" checked={view.captionStyle.karaoke ?? false} onChange={event => { remember(); setProject(current => ({ ...current, captionsEnabled: true, ...(current.wrappingCaptions ? { wrappingCaptions: { ...current.wrappingCaptions, enabled: false } } : {}), captionStyle: { ...current.captionStyle, karaoke: event.target.checked } })); }} />Karaoke, active word in yellow</label><p className="note">Uses detected word timing. Edit words in Transcript. Three words stay visible; the spoken word turns yellow.</p><label className="row"><input type="checkbox" checked={view.captionsEnabled} onChange={(event) => commitOperations([{ type: "captions", enabled: event.target.checked }])} /> Burn-in captions</label><div className="lab" style={{ marginTop: 12 }}>Style</div>{(["owner", "plain"] as const).map((preset) => <button key={preset} className={"chip" + (view.captionStyle.preset === preset ? " on" : "")} onClick={() => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, preset } })); }}>{preset === "owner" ? "Font" : "Plain"}</button>)}<label className="lab">Size {view.captionStyle.size}px<input type="range" min={32} max={92} value={view.captionStyle.size} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, size: Number(event.target.value) } })); }} /></label><label className="lab">Vertical position {view.captionStyle.position}%<input type="range" min={20} max={80} value={view.captionStyle.position} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, position: Number(event.target.value) } })); }} /></label><label className="lab">Caption colour<input className="field" type="color" value={view.captionStyle.color} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, color: event.target.value } })); }} /></label><p className="note">{view.captionStyle.karaoke ? "Karaoke uses your chosen size, position and colour. The active word is yellow; text and timing come from Transcript." : view.captionStyle.preset === "owner" ? "Font: sentence capitals and I, no punctuation, chest-line words, lemon keyword, hard cuts, seven-frame phrase breaks." : "Plain captions use your chosen size, position and colour."}</p></div>}
+          {st.tool === "Captions" && <div>
+            <label className="row"><input type="checkbox" checked={view.captionsEnabled} onChange={(event) => commitOperations([{ type: "captions", enabled: event.target.checked }])} /> Burn-in captions</label>
+            <CaptionPreview style={view.captionStyle} />
+            <div className="lab" style={{ marginTop: 12 }}>Caption style</div>
+            <div className="caption-style-list">{([["impact", "Impact word + caption", "Base style"], ["owner", "One word, saved Font", "Your style"], ["plain", "Plain", ""]] as const).map(([preset, label, tag]) => <button key={preset} className={"caption-style-option" + (view.captionStyle.preset === preset ? " on" : "")} onClick={() => setCaption({ preset })}><b>{label}</b>{tag && <span>{tag}</span>}</button>)}</div>
+            <label className="row" style={{ marginTop: 8 }}><input type="checkbox" checked={view.captionStyle.karaoke ?? false} onChange={event => { remember(); setProject(current => ({ ...current, captionsEnabled: true, ...(current.wrappingCaptions ? { wrappingCaptions: { ...current.wrappingCaptions, enabled: false } } : {}), captionStyle: { ...current.captionStyle, karaoke: event.target.checked } })); }} />Karaoke, spoken word in yellow</label>
+            <div className="lab">Caption font</div>
+            <div className="font-list">{CAPTION_FONT_OPTIONS.map((option) => <button key={option.id} className={"font-option" + ((view.captionStyle.font ?? captionDefaultFont(view.captionStyle.preset)) === option.id ? " on" : "")} onClick={() => setCaption({ font: option.id })}><span className="font-sample" style={{ font: option.cssFont }}>Ag</span><b>{option.label}</b></button>)}</div>
+            {view.captionStyle.preset === "impact" && <>
+              <div className="lab">Impact word font</div>
+              <div className="font-list">{CAPTION_FONT_OPTIONS.map((option) => <button key={option.id} className={"font-option" + ((view.captionStyle.impactFont ?? "anton") === option.id ? " on" : "")} onClick={() => setCaption({ impactFont: option.id })}><span className="font-sample" style={{ font: option.cssFont }}>Ag</span><b>{option.label}</b></button>)}</div>
+              <label className="lab">Impact colour<input className="field" type="color" value={view.captionStyle.impactColor ?? "#E8443A"} onChange={(event) => setCaption({ impactColor: event.target.value })} /></label>
+            </>}
+            {(view.captionStyle.font ?? captionDefaultFont(view.captionStyle.preset)) === "body" && <label className="lab">Weight {view.captionStyle.weight ?? 600}<input type="range" min={300} max={900} step={100} value={view.captionStyle.weight ?? 600} onChange={(event) => setCaption({ weight: Number(event.target.value) })} /></label>}
+            <label className="lab">Size {view.captionStyle.size}px<input type="range" min={32} max={92} value={view.captionStyle.size} onChange={(event) => setCaption({ size: Number(event.target.value) })} /></label>
+            <label className="lab">Vertical position {view.captionStyle.position}%<input type="range" min={20} max={80} value={view.captionStyle.position} onChange={(event) => setCaption({ position: Number(event.target.value) })} /></label>
+            <label className="lab">Caption colour<input className="field" type="color" value={view.captionStyle.color} onChange={(event) => setCaption({ color: event.target.value })} /></label>
+            <label className="lab">Outline {view.captionStyle.outline ?? 0}px<input type="range" min={0} max={6} step={0.5} value={view.captionStyle.outline ?? 0} onChange={(event) => setCaption({ outline: Number(event.target.value) })} /></label>
+            <label className="lab">Shadow {view.captionStyle.shadow ?? 4}<input type="range" min={0} max={10} step={1} value={view.captionStyle.shadow ?? 4} onChange={(event) => setCaption({ shadow: Number(event.target.value) })} /></label>
+            <div className="lab">Animation</div>
+            <div className="row">{([["pop", "Pop"], ["none", "Hard cut"]] as const).map(([value, label]) => <button key={value} className={"chip" + ((view.captionStyle.animation ?? "pop") === value ? " on" : "")} onClick={() => setCaption({ animation: value })}>{label}</button>)}</div>
+            <p className="note">{view.captionStyle.karaoke ? "Karaoke uses your chosen font, size, position, colour, outline and shadow. Three words stay visible; the spoken word turns yellow." : view.captionStyle.preset === "impact" ? "The phrase keyword stays big behind the normal words. Timing comes from the transcript, never even spacing." : view.captionStyle.preset === "owner" ? "Font: sentence capitals and I, no punctuation, chest-line words, lemon keyword, hard cuts, seven-frame phrase breaks." : "Plain captions use your chosen font, size, position and colour."}</p>
+          </div>}
           {st.tool === "Crop" && selected && <div><p style={{ fontSize: 14 }}>Drag the frame to reframe. Choose a ratio below the preview.</p><label className="lab">Zoom {selected.crop.zoom.toFixed(2)}x<input type="range" min={1} max={4} step={0.05} value={selected.crop.zoom} onChange={(event) => commitOperations([{ type: "crop", clipId: selected.id, ratio: view.ratio, zoom: Number(event.target.value) }])} /></label><p className="note">Offset X {selected.crop.x.toFixed(0)}, Y {selected.crop.y.toFixed(0)}</p></div>}
           {st.tool === "Colour" && selected && <div>{([["brightness", "Brightness", 0, 200], ["contrast", "Contrast", 0, 200], ["saturation", "Saturation", 0, 200], ["temperature", "Temperature", -100, 100]] as const).map(([key, label, min, max]) => <label className="lab" key={key}>{label}: {selected.color[key]}<input aria-label={label} type="range" min={min} max={max} value={selected.color[key]} onChange={(event) => updateColor(key, Number(event.target.value))} /></label>)}</div>}
           {st.tool === "Style" && selected && <div><p style={{ fontSize: 14 }}>Pick a look for this clip. It sets colour in one tap and you can undo it.</p><div className="row" style={{ flexWrap: "wrap" }}>{([["Clean", 100, 105, 100, 0], ["Warm", 105, 105, 110, 30], ["Punchy", 105, 125, 130, 0], ["Soft", 110, 90, 90, 10], ["Cool", 100, 105, 100, -30]] as const).map(([label, brightness, contrast, saturation, temperature]) => <button key={label} className="chip" onClick={() => commitOperations([{ type: "color", clipId: selected.id, brightness, contrast, saturation, temperature }])}>{label}</button>)}</div><p className="note">Caption look is set in Captions.</p></div>}
@@ -413,10 +502,6 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
         {st.tool === "Sound" && <StyleControls project={view} transcript={transcript} change={commit} />}
         {st.tool === "Style" && <><button className="btn s g" onClick={runTalkingHeadStyle} disabled={Boolean(busy) || exporting || !project.clips.length}>Apply my talking-head style</button>    {styleResult && <section className="style-result" aria-label="Talking-head style result"><h2>Changed</h2><ul>{styleResult.changed.map((item) => <li key={item}>{item}</li>)}</ul>{styleResult.couldNot.length > 0 && <><h2>Could not apply</h2><ul>{styleResult.couldNot.map((item) => <li key={item}>{item}</li>)}</ul></>}<h2>Available, not applied</h2><ul>{!project.motionScenes?.length && <li>Continuous transcript-led motion scenes</li>}{!project.wrappingCaptions?.enabled && <li>Optional manually positioned wrapping captions</li>}{(!project.subjectMode || project.subjectMode === "original") && <li>Experimental local subject sticker/silhouette after mask preparation</li>}{!project.music?.enabled && <li>Background music: local file or synthesised soft pad</li>}</ul><h2>Not available yet</h2><ul>{NOT_AVAILABLE.map((item) => <li key={item}>{item}</li>)}</ul></section>}
 </>}
-        <details className="editor-prompt"><summary>Edit by prompt</summary>
-    <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div className="nav"><button className={promptMode === "basic" ? "on" : ""} onClick={() => setPromptMode("basic")}>Basic local mode</button><button className={promptMode === "ai" ? "on" : ""} onClick={() => setPromptMode("ai")} disabled={connection.state !== "connected"}>AI mode</button></div><span className="tg n">{promptMode === "basic" ? "Basic, runs in your browser" : connection.state === "connected" ? "Connected" : "Not connected"}</span></div><div className="row" style={{ marginTop: 10 }}><input ref={promptRef} className="field" aria-label="Edit by prompt" placeholder="Tell the editor what to change, in your words..." value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void previewPrompt(); }} /><button className="btn" disabled={Boolean(busy) || !prompt.trim() || (promptMode === "ai" && connection.state !== "connected")} onClick={previewPrompt}>Apply edit</button></div>{promptMode === "ai" && connection.state !== "connected" && <p className="note">{NOT_CONNECTED_COPY}</p>}<p className="note">Every edit shows its change list first. Apply or undo. Nothing silently changes.</p></div>
-
-        </details>
     {pending && <div className="panel pending-edit" style={{ marginTop: 12 }}><div className="row"><h2>Review the proposed edit</h2><span className="sp" /><span className={"tg " + (pending.source === "ai" ? "r" : "n")}>{pending.source === "ai" ? "Connected AI operations" : "Basic local operations"}</span></div><p>{pending.summary}</p><div className="stack" style={{ margin: "12px 0" }}>{pending.operations.map((operation, index) => <div className="card" key={`${operation.type}-${index}`}>{describeOperation(operation)}</div>)}</div><div className="row" style={{ flexWrap: "wrap" }}><button className="btn" onClick={() => commit(pending.preview)}>Accept edit</button><button className="btn g" onClick={() => setPending(null)}>Reject</button><button className="btn g" onClick={() => { setPrompt(pending.prompt); setPending(null); promptRef.current?.focus(); }}>Tweak prompt</button></div></div>}
       </aside>
     </div>
