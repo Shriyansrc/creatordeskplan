@@ -1,3 +1,4 @@
+import { generationHeaders } from "@/lib/ai/client";
 import { useEffect, useState } from "react";
 import { getDesk } from "@/desk/store";
 import { applyRemote, fetchRemote, lastSyncedAt, pushLocal, type Remote } from "@/desk/sync";
@@ -82,7 +83,7 @@ export function ReferenceAnalysis({ topic, niche }: { topic: string; niche: stri
     setFetching(true);
     setNote("");
     try {
-      const r = await fetch("/api/link-meta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ link }) });
+      const r = await fetch("/api/link-meta", { method: "POST", headers: await generationHeaders(), body: JSON.stringify({ link }) });
       const d = (await r.json()) as { ok: boolean; reason?: string; title?: string; author?: string; text?: string };
       if (!d.ok) setNote(d.reason ?? "Could not read that link.");
       else {
@@ -132,7 +133,7 @@ export function ListenButton({ text }: { text: string }) {
     setBusy(true);
     setErr("");
     try {
-      const res = await fetch("/api/ai/speech", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: text.slice(0, 1600), style: "clearly and naturally, like a friendly teacher", ...(getDesk().profile.language ? { language: getDesk().profile.language } : {}) }) });
+      const res = await fetch("/api/ai/speech", { method: "POST", headers: await generationHeaders(), body: JSON.stringify({ text: text.slice(0, 1600), style: "clearly and naturally, like a friendly teacher", ...(getDesk().profile.language ? { language: getDesk().profile.language } : {}) }) });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `Voice failed with HTTP ${res.status}`);
