@@ -69,6 +69,7 @@ export const planInputSchema = z.object({
   niche: z.string().trim().min(2).max(300),
   platforms: z.array(platformSchema).min(1).max(4),
   research: researchSchema,
+  language: z.string().max(40).optional(),
 });
 export type PlanInput = z.infer<typeof planInputSchema>;
 
