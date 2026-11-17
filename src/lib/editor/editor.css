@@ -90,4 +90,35 @@
   .workspace-editor .editor-inspector { padding: 10px 12px; }
   .workspace-editor .editor-export select { width: 160px; max-width: 42vw; }
   .workspace-editor .editor-export .btn { font-size: 12px; }
-                                            }
+}
+
+.workspace-editor .editor-tool-select { display: none; }
+@media(max-width:600px) {
+ .workspace-editor .editor-toolbar > button { display: none; }
+ .workspace-editor .editor-tool-select { display:flex; align-items:center; gap:12px; width:100%; font-size:13px; }
+ .workspace-editor .editor-tool-select select { flex:1; min-width:0; padding:8px 12px; border:1px solid #b9c6d8; border-radius:10px; background:#e5edf9; color:#0058cc; font:600 14px DM,system-ui,sans-serif; }
+}
+@media(max-width:820px) and (max-height:650px) {
+ .workspace-editor { min-height:0; }
+ .workspace-editor .editor-workspace { grid-template-rows:38px minmax(100px,1fr) minmax(85px,1fr); }
+ .workspace-editor .editor-header h1 { display:none; }
+ .workspace-editor .editor-header { justify-content:flex-end; }
+ .workspace-editor .editor-header .btn { min-height:28px; padding:4px 8px; }
+ .workspace-editor .editor-timeline { padding:5px; }
+ .workspace-editor .timeline-ruler { height:8px; margin-bottom:3px; }
+ .workspace-editor .editor-strip { min-height:30px; max-height:36px; }
+ .workspace-editor .timeline-clip small { display:none; }
+ .workspace-editor .eratio .chip { display:none; }
+}
+
+.workspace-editor .editor-play { position:absolute; z-index:3; left:50%; bottom:12px; transform:translateX(-50%); background:#f1f4f8; color:#003b88; border:1px solid #c4d2e5; border-radius:28px; min-width:70px; min-height:44px; padding:9px 16px; font-size:14px; font-weight:700; cursor:pointer; }
+.workspace-editor .editor-play:disabled { opacity:.65; }
+@media(max-width:820px) and (max-height:650px) {
+ .workspace-editor { height:calc(100dvh - 126px); }
+ .workspace-editor .editor-workspace { grid-template-rows:38px minmax(140px,1.2fr) minmax(80px,1fr); }
+ .workspace-editor .estage { min-height:76px; }
+ .workspace-editor .editor-play { min-height:36px; min-width:56px; padding:6px 10px; bottom:6px; font-size:12px; }
+}
+@media(max-width:820px) and (max-height:650px) {
+ .workspace-editor .editor-phone { overflow:visible; }
+}
