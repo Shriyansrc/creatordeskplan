@@ -35,7 +35,7 @@ export async function reserveReferenceSearch(userId: string): Promise<boolean> {
   if (error || typeof data !== "boolean") throw new Error("Reference quota unavailable");
   return data;
 }
-/** Shared generation guard. All paid AI requests share the existing durable 8/80 rolling-hour budget. */
+/** Shared generation guard. All paid AI requests share the existing durable 100/1000 rolling-hour budget. */
 export async function guardGeneration(request: Request): Promise<Response | null> {
   const token = /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return Response.json({ error: "Sign in to use AI generation." }, { status: 401 });
@@ -44,7 +44,7 @@ export async function guardGeneration(request: Request): Promise<Response | null
   catch { return Response.json({ error: "AI authentication is unavailable. Nothing was generated." }, { status: 503 }); }
   if (session.status) return Response.json({ error: session.status === 401 ? "Sign in to use AI generation." : "AI authentication is unavailable. Nothing was generated." }, { status: session.status });
   try {
-    if (!await reserveReferenceSearch(session.userId)) return Response.json({ error: "AI limit reached: 8 requests per account and 80 total per rolling hour, shared with reference searches. Try again later." }, { status: 429 });
+    if (!await reserveReferenceSearch(session.userId)) return Response.json({ error: "AI limit reached: 100 requests per account and 1,000 total per rolling hour, shared with reference searches. Try again later." }, { status: 429 });
   } catch { return Response.json({ error: "AI quota is unavailable. Nothing was generated." }, { status: 503 }); }
   return null;
             }

@@ -15,6 +15,13 @@
       "when": 1794903486251,
       "tag": "0001_reference_search_quota",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794925978951,
+      "tag": "0002_raise_ai_quota_100",
+      "breakpoints": true
     }
   ]
 }

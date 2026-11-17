@@ -22,29 +22,29 @@ describe.skipIf(process.env["RUN_REFERENCE_DB_TESTS"] !== "1")("PostgreSQL refer
       const before = await sql`select count(*)::int as n from public.reference_search_quota where reserved_at > clock_timestamp() - interval '1 hour'`;
       const initial = before[0]?.['n'];
       if (typeof initial !== "number") throw new Error("Count unavailable");
-      expect(initial).toBeLessThanOrEqual(72);
+      expect(initial).toBeLessThanOrEqual(900);
       const user = randomUUID();
-      for (let i = 0; i < 8; i++) expect((await sql`select public.reserve_reference_search(${user}::uuid) as allowed`)[0]?.['allowed']).toBe(true);
+      for (let i = 0; i < 100; i++) expect((await sql`select public.reserve_reference_search(${user}::uuid) as allowed`)[0]?.['allowed']).toBe(true);
       expect((await sql`select public.reserve_reference_search(${user}::uuid) as allowed`)[0]?.['allowed']).toBe(false);
-      expect((await sql`select count(*)::int as n from public.reference_search_quota where user_id=${user}::uuid`)[0]?.['n']).toBe(8);
-      expect((await sql`select count(*)::int as n from public.reference_search_quota where reserved_at > clock_timestamp() - interval '1 hour'`)[0]?.['n']).toBe(initial + 8);
+      expect((await sql`select count(*)::int as n from public.reference_search_quota where user_id=${user}::uuid`)[0]?.['n']).toBe(100);
+      expect((await sql`select count(*)::int as n from public.reference_search_quota where reserved_at > clock_timestamp() - interval '1 hour'`)[0]?.['n']).toBe(initial + 100);
     } finally { await sql`rollback`; await sql.end(); }
   });
-  it("enforces exactly 80 globally and does not increment either bucket when denied", async () => {
+  it("enforces exactly 1000 globally and does not increment either bucket when denied", async () => {
     const sql = connect();
     try {
       await lock(sql);
       const initial = (await sql`select count(*)::int as n from public.reference_search_quota where reserved_at > clock_timestamp() - interval '1 hour'`)[0]?.['n'];
       if (typeof initial !== "number") throw new Error("Count unavailable");
       const users = Array.from({ length: 10 }, () => randomUUID());
-      for (let i = initial; i < 80; i++) {
+      for (let i = initial; i < 1000; i++) {
         const user = users[Math.floor((i - initial) / 8)];
         if (!user) throw new Error("Test user unavailable");
         expect((await sql`select public.reserve_reference_search(${user}::uuid) as allowed`)[0]?.['allowed']).toBe(true);
       }
       const deniedUser = randomUUID();
       expect((await sql`select public.reserve_reference_search(${deniedUser}::uuid) as allowed`)[0]?.['allowed']).toBe(false);
-      expect((await sql`select count(*)::int as n from public.reference_search_quota where reserved_at > clock_timestamp() - interval '1 hour'`)[0]?.['n']).toBe(80);
+      expect((await sql`select count(*)::int as n from public.reference_search_quota where reserved_at > clock_timestamp() - interval '1 hour'`)[0]?.['n']).toBe(1000);
       expect((await sql`select count(*)::int as n from public.reference_search_quota where user_id=${deniedUser}::uuid`)[0]?.['n']).toBe(0);
     } finally { await sql`rollback`; await sql.end(); }
   });
