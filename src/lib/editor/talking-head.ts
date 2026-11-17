@@ -51,7 +51,7 @@ export function safeSilenceRanges(project: EditorProject, transcript: Transcript
   return merged;
 }
 
-export const NOT_AVAILABLE = ["Named commercial tracks", "Rounded wrapping text around the person", "Bubbly motion graphics", "Character replacement"];
+export const NOT_AVAILABLE = ["Named commercial tracks", "Automatic face-tracked wrapping captions", "Continuous bubbly graphic scenes", "Beat-timed character replacement scenes"];
 export type StyleResult = { project: EditorProject; changed: string[]; couldNot: string[] };
 
 export function applyTalkingHeadStyle(original: EditorProject, transcript: TranscriptWord[], detected: SilenceRange[], detectionFailures: string[] = []): StyleResult {
