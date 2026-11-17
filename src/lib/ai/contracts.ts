@@ -101,6 +101,8 @@ export const scriptInputSchema = z.object({
   instruction: z.string().max(2000).optional(),
   styleNotes: z.string().max(2000).optional(),
   language: z.string().max(40).optional(),
+  searchPhrases: z.array(z.string().max(200)).max(25).optional(),
+  audience: z.string().max(500).optional(),
 });
 export type ScriptInput = z.infer<typeof scriptInputSchema>;
 
@@ -123,6 +125,8 @@ export const scriptSchema = z.object({
     .min(3)
     .max(15),
   seoPhrase: z.string().min(1).max(300),
+  title: z.string().max(200).optional(),
+  caption: z.string().max(2200).optional(),
   options: z.object({
     hook: sectionOptionSchema,
     problem: sectionOptionSchema,
