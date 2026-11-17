@@ -2,7 +2,7 @@ import { ReferenceMatch } from "@/lib/editor/reference-match-controls";
 import { TranscriptPanel } from "@/lib/editor/transcript-panel";
 import { MotionControls } from "@/lib/editor/motion-controls";
 import { SubjectControls } from "@/lib/editor/subject-controls";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { editInputSchema, editResponseSchema } from "@/lib/ai/contracts";
 import type { EditOperation } from "@/lib/editor/contracts";
 import { callAI, NOT_CONNECTED_COPY, useAIConnection } from "@/lib/ai/client";
@@ -22,6 +22,25 @@ import { prepareSoundtrack, type Soundtrack } from "@/lib/editor/soundtrack";
 import { applyTalkingHeadStyle, NOT_AVAILABLE, type StyleResult } from "@/lib/editor/talking-head";
 import "@/lib/editor/editor.css";
 import { usePersistentState } from "@/lib/use-persistent-state";
+
+const ICON_PROPS = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+
+/** Compact rail icons, one per real tool. */
+const TOOL_ICONS: Record<string, ReactNode> = {
+  AI: <svg {...ICON_PROPS}><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>,
+  Media: <svg {...ICON_PROPS}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5l5 2.5-5 2.5z"/></svg>,
+  Reference: <svg {...ICON_PROPS}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>,
+  Trim: <svg {...ICON_PROPS}><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.2 7.6L20 19M8.2 16.4L20 5"/></svg>,
+  Crop: <svg {...ICON_PROPS}><path d="M7 2v15h15M2 7h15v15"/></svg>,
+  Transcript: <svg {...ICON_PROPS}><path d="M4 6h16M4 10h16M4 14h10M4 18h7"/></svg>,
+  Captions: <svg {...ICON_PROPS}><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10.6 10.2a2.1 2.1 0 1 0 0 3.6M17.6 10.2a2.1 2.1 0 1 0 0 3.6"/></svg>,
+  Engage: <svg {...ICON_PROPS}><path d="M5 5h14M12 5v14M9 19h6"/></svg>,
+  Style: <svg {...ICON_PROPS}><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>,
+  Colour: <svg {...ICON_PROPS}><path d="M4 8h9M19 8h1M4 16h1M9 16h11"/><circle cx="16" cy="8" r="2.2"/><circle cx="6" cy="16" r="2.2"/></svg>,
+  Motion: <svg {...ICON_PROPS}><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>,
+  Subject: <svg {...ICON_PROPS}><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/></svg>,
+  Sound: <svg {...ICON_PROPS}><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>,
+};
 
 const TOOLS = ["AI", "Media", "Reference", "Trim", "Transcript", "Captions", "Crop", "Colour", "Style", "Engage", "Sound", "Motion", "Subject"] as const;
 const RATIOS = ["9:16", "1:1", "4:5", "16:9"] as const;
@@ -408,7 +427,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     {busy && <p className="editor-message" role="status">{busy}</p>}
     {error && <div className="notice editor-message" role="alert">{error}</div>}
     <div className="ed editor-workspace">
-      <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{([['Assist',['AI']],['Footage',['Media','Reference','Trim','Crop']],['Words',['Transcript','Captions','Engage']],['Look',['Style','Colour','Motion','Subject']],['Audio',['Sound']]] as const).map(([group,tools])=><div className="tool-group" key={group}><span>{group}</span>{tools.map(tool=><button key={tool} className={st.tool===tool?'on':''} onClick={()=>set({tool})}>{tool==='Engage'?'Text & hook':tool==='Sound'?'Music & sound':tool}</button>)}</div>)}</nav>
+      <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{([['Assist',['AI']],['Footage',['Media','Reference','Trim','Crop']],['Words',['Transcript','Captions','Engage']],['Look',['Style','Colour','Motion','Subject']],['Audio',['Sound']]] as const).map(([group,tools])=><div className="tool-group" key={group}><span>{group}</span>{tools.map(tool=><button key={tool} className={st.tool===tool?'on':''} onClick={()=>set({tool})}>{TOOL_ICONS[tool]}<em>{tool==='Engage'?'Text & hook':tool==='Sound'?'Music & sound':tool}</em></button>)}</div>)}</nav>
       <section className="editor-viewer" aria-label="Video and timeline">
         <div className="estage">
           <div className="phone editor-phone" style={{ aspectRatio: view.ratio.replace(":", "/") }} onPointerDown={(event) => {
