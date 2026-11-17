@@ -20,6 +20,30 @@ async function probe(name: string, url: string, init?: RequestInit) {
   }
 }
 
+function decodeBing(href: string): string {
+  try {
+    const u = new URL(href.replace(/&amp;/g, "&"));
+    const p = u.searchParams.get("u");
+    if (p && p.startsWith("a1")) {
+      const b = p.slice(2).replace(/-/g, "+").replace(/_/g, "/");
+      return atob(b + "=".repeat((4 - (b.length % 4)) % 4));
+    }
+  } catch { /* fall through */ }
+  return href;
+}
+
+async function bingDeep(label: string, url: string) {
+  try {
+    const r = await fetch(url, { headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" } });
+    const t = await r.text();
+    const hrefs = [...t.matchAll(/<a[^>]+href="(https?:\/\/www\.bing\.com\/ck\/a[^"]+)"/g)].map((m) => decodeBing(m[1]));
+    const direct = [...t.matchAll(/<h2[^>]*><a[^>]+href="(https?:[^"]+)"/g)].map((m) => m[1]);
+    const murl = [...t.matchAll(/&quot;murl&quot;:&quot;(https?:[^&]+?)&quot;/g)].map((m) => m[1]);
+    const turl = [...t.matchAll(/&quot;turl&quot;:&quot;(https?:[^&]+?)&quot;/g)].map((m) => m[1].slice(0, 90));
+    return { label, status: r.status, bytes: t.length, decoded: hrefs.filter((h) => /youtube|instagram|tiktok|linkedin|x\.com|twitter/.test(h)).slice(0, 8), direct: direct.slice(0, 5), murl: murl.slice(0, 5), turl: turl.slice(0, 3), ckCount: hrefs.length };
+  } catch (e) { return { label, error: e instanceof Error ? e.message : "failed" }; }
+}
+
 export const Route = createFileRoute("/api/ai/refprobe")({
   server: {
     handlers: {
@@ -37,7 +61,12 @@ export const Route = createFileRoute("/api/ai/refprobe")({
           probe("yt-oembed", "https://www.youtube.com/oembed?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ&format=json"),
           probe("yt-watch", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
         ]);
-        return Response.json(out);
+        const deep = await Promise.all([
+          bingDeep("bing-web-yt", `https://www.bing.com/search?setlang=en&count=30&q=${eq}`),
+          bingDeep("bing-videos", `https://www.bing.com/videos/search?setlang=en&q=${encodeURIComponent(q + " youtube")}`),
+          bingDeep("bing-web-ig", `https://www.bing.com/search?setlang=en&count=30&q=${eqi}`),
+        ]);
+        return Response.json({ out: out.map((o) => ({ name: o.name, status: "status" in o ? o.status : null, err: "error" in o ? o.error : null })), deep });
       },
     },
   },
