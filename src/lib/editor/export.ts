@@ -1,3 +1,4 @@
+import { drawWrapping, DEFAULT_WRAPPING } from "./wrapping";
 import { withWebmDuration } from "./webm-duration";
 import { activeWord, clipDuration, clipStart, projectDuration, wordTimelineTime } from "./project";
 import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./types";
@@ -98,7 +99,8 @@ export function drawFrame(
     context.fillStyle = "#F4F1EA";
     context.fillText(overlay.text, canvas.width / 2, canvas.height * 0.2, canvas.width * 0.9);
   }
-  if (project.captionsEnabled) {
+  if (project.captionsEnabled && project.wrappingCaptions?.enabled) drawWrapping(context, canvas, project, transcript, timelineTime, { ...DEFAULT_WRAPPING, ...project.wrappingCaptions });
+  if (project.captionsEnabled && !project.wrappingCaptions?.enabled) {
     const ownerStyle = project.captionStyle.preset === "owner";
     const cue = ownerStyle ? captionAt(captionCues(project, transcript), timelineTime) : undefined;
     const word = ownerStyle ? cue?.word : activeWord(project, transcript, clip, sourceTime);
@@ -257,4 +259,4 @@ export async function exportProject(
   const blob = format === "mp4" ? await convertToMp4(webm, onProgress) : webm;
   onProgress(1, "Export ready");
   return blob;
-}
+        }
