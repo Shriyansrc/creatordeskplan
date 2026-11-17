@@ -31,9 +31,26 @@ export type EditorClip = {
   zooms: ZoomPunch[];
 };
 
+export type CaptionFont = "anton" | "poppins" | "script" | "body";
+export type CaptionPreset = "impact" | "owner" | "plain";
 export type CaptionStyle = {
   karaoke?: boolean;
-  preset: "owner" | "plain";
+  preset: CaptionPreset;
+  /** Font for the normal caption words. Defaults: script (impact preset), poppins (owner), body (plain). */
+  font?: CaptionFont;
+  /** Font for the big impact word in the impact preset. Defaults to anton. */
+  impactFont?: CaptionFont;
+  /** Impact word colour in the impact preset. Defaults to the reference red. */
+  impactColor?: string;
+  /** Real font weight 100-900; only the variable Clean/body font honours it. */
+  weight?: number;
+  /** Text stroke width in px at 720px preview width; 0 means no outline. */
+  outline?: number;
+  outlineColor?: string;
+  /** Soft shadow strength 0-10; default 4 for caption words, 0 for the impact word. */
+  shadow?: number;
+  /** Word-entry animation. "pop" is a light scale-in on the first frames; "none" is a hard cut. */
+  animation?: "pop" | "none";
   size: number;
   color: string;
   position: number;
