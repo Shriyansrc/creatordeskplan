@@ -82,6 +82,8 @@ export const planTopicSchema = z.object({
   reason: z.string().min(1).max(600),
   painPoint: z.string().max(500),
   kind: z.enum(["trending", "pain point", "authority"]),
+  format: z.enum(["video", "image", "text"]).optional(),
+  pillar: z.enum(["education", "proof", "promotion", "connection"]).optional(),
   platform: platformSchema,
 });
 export const planSchema = z.object({
@@ -92,6 +94,7 @@ export type PlanResult = z.infer<typeof planSchema>;
 export type PlanTopic = z.infer<typeof planTopicSchema>;
 
 export const scriptInputSchema = z.object({
+  format: z.enum(["video", "image", "text"]).optional(),
   topic: z.string().trim().min(2).max(300),
   niche: z.string().trim().min(2).max(300),
   goal: z.string().trim().min(2).max(300),
