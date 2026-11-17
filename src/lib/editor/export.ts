@@ -4,6 +4,8 @@ import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./typ
 import { captionScale, timelineZoom } from "./talking-head";
 
 export const DIMENSIONS = { "9:16": [720, 1280], "1:1": [900, 900], "4:5": [864, 1080], "16:9": [1280, 720] } as const;
+const SHADOW_WEIGHTS = Float32Array.from({ length: 256 }, (_, luma) => Math.max(0, 1 - luma / (255 * 0.45)) ** 2);
+const shadowMasks = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
 
 function waitFor(event: string, video: HTMLVideoElement) {
   return new Promise<void>((resolve, reject) => {
@@ -47,18 +49,32 @@ export function drawFrame(
   }
 
   if (clip.color.navyShadows && video.videoWidth > 0) {
-    const image = context.getImageData(0, 0, canvas.width, canvas.height);
+    let mask = shadowMasks.get(canvas);
+    if (!mask) {
+      mask = document.createElement("canvas");
+      mask.width = 180;
+      mask.height = Math.round(180 * canvas.height / canvas.width);
+      shadowMasks.set(canvas, mask);
+    }
+    const maskContext = mask.getContext("2d", { willReadFrequently: true });
+    if (maskContext) {
+    maskContext.clearRect(0, 0, mask.width, mask.height);
+    maskContext.drawImage(canvas, 0, 0, mask.width, mask.height);
+    const image = maskContext.getImageData(0, 0, mask.width, mask.height);
     for (let i = 0; i < image.data.length; i += 4) {
       const r = image.data[i] ?? 0;
       const g = image.data[i + 1] ?? 0;
       const b = image.data[i + 2] ?? 0;
-      const luma = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
-      const amount = clip.color.navyShadows * Math.max(0, 1 - luma / 0.45) ** 2;
-      image.data[i] = r * (1 - amount) + 16 * amount;
-      image.data[i + 1] = g * (1 - amount) + 36 * amount;
-      image.data[i + 2] = b * (1 - amount) + 68 * amount;
+      const luma = (54 * r + 183 * g + 19 * b) >> 8;
+      const amount = clip.color.navyShadows * (SHADOW_WEIGHTS[luma] ?? 0);
+      image.data[i] = 16;
+      image.data[i + 1] = 36;
+      image.data[i + 2] = 68;
+      image.data[i + 3] = Math.round(amount * 255);
     }
-    context.putImageData(image, 0, 0);
+    maskContext.putImageData(image, 0, 0);
+    context.drawImage(mask, 0, 0, canvas.width, canvas.height);
+    }
   }
   if (clip.color.vignette) {
     const radius = Math.hypot(canvas.width, canvas.height) / 2;
@@ -147,14 +163,13 @@ async function renderWebM(
   try {
     await audioContext.resume();
     await loadCaptionFont();
-    recorder.start(250);
     for (const clip of project.clips) {
       const asset = assets.find((item) => item.sourceId === clip.sourceId);
       if (!asset) throw new Error("The original clip is unavailable.");
-      if (recorder.state === "recording") recorder.pause();
       onProgress(completed / total, `Rendering ${clip.name}`);
       video.src = asset.url;
       if (video.readyState < 1) await waitFor("loadedmetadata", video);
+      if (video.readyState < 2) await waitFor("loadeddata", video);
       video.playbackRate = clip.speed;
       gain.gain.value = clip.muted ? 0 : clip.volume;
       const seekTarget = Math.min(clip.trimIn, Math.max(0, video.duration - 0.01));
@@ -164,6 +179,7 @@ async function renderWebM(
         await seeked;
       }
       drawFrame(context, canvas, video, project, clip, transcript, clipStart(project, clip.id));
+      if (recorder.state === "inactive") recorder.start(250);
       if (recorder.state === "paused") recorder.resume();
       await video.play();
       await new Promise<void>((resolve) => {
@@ -177,6 +193,8 @@ async function renderWebM(
         requestAnimationFrame(draw);
       });
       video.pause();
+      gain.gain.value = 0;
+      if (recorder.state === "recording") recorder.pause();
       completed += clipDuration(clip);
     }
     recorder.stop();

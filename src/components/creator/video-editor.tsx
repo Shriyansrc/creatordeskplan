@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { editInputSchema, editResponseSchema, } from "@/lib/ai/contracts";
+import { editInputSchema, editResponseSchema } from "@/lib/ai/contracts";
 import type { EditOperation } from "@/lib/editor/contracts";
 import { callAI, NOT_CONNECTED_COPY, useAIConnection } from "@/lib/ai/client";
 import type { SetShared, StudioShared } from "@/lib/creator-shared";
@@ -67,7 +67,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     const canvas = canvasRef.current;
     const video = videoRef.current;
     const context = canvas?.getContext("2d");
-    if (!canvas || !video || !context || !activeClip) return;
+    if (!canvas || !video || !context || !activeClip || exporting) return;
     let stopped = false;
     let frame = 0;
     const render = () => {
@@ -81,7 +81,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     void loadCaptionFont().catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Caption font unavailable"));
     render();
     return () => { stopped = true; cancelAnimationFrame(frame); };
-  }, [view, activeClip, activeAsset?.url, transcript]);
+  }, [view, activeClip, activeAsset?.url, transcript, exporting]);
 
   useEffect(() => {
     const available = getSessionClips();
