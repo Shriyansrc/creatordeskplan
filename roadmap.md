@@ -9,3 +9,4 @@
 - [x] Reference search (YouTube) and research data-source check.
 - [x] Voice and video generation jobs with clips, editor and publish handoff.
 - [x] Reel job contract, local service, docs and SQL file (not applied).
+- [ ] Apply local talking-head rules in the editor, share preview/export rendering, and verify timing, silence tails, and undo.

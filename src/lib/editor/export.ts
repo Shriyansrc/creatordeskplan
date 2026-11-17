@@ -1,7 +1,9 @@
-import { activeWord, clipDuration, clipStart, projectDuration } from "./project";
+import { activeWord, clipDuration, clipStart, projectDuration, wordTimelineTime } from "./project";
 import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./types";
 
-const DIMENSIONS = { "9:16": [720, 1280], "1:1": [900, 900], "4:5": [864, 1080], "16:9": [1280, 720] } as const;
+import { captionScale, timelineZoom } from "./talking-head";
+
+export const DIMENSIONS = { "9:16": [720, 1280], "1:1": [900, 900], "4:5": [864, 1080], "16:9": [1280, 720] } as const;
 
 function waitFor(event: string, video: HTMLVideoElement) {
   return new Promise<void>((resolve, reject) => {
@@ -18,7 +20,7 @@ function filterFor(clip: EditorClip) {
   return `brightness(${clip.color.brightness}%) contrast(${clip.color.contrast}%) saturate(${clip.color.saturation}%) sepia(${Math.abs(warmth)}%) hue-rotate(${warmth < 0 ? 180 : 0}deg)`;
 }
 
-function drawFrame(
+export function drawFrame(
   context: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   video: HTMLVideoElement,
@@ -32,7 +34,7 @@ function drawFrame(
   context.fillStyle = "#111722";
   context.fillRect(0, 0, canvas.width, canvas.height);
   const punch = clip.zooms.find((zoom) => sourceTime >= zoom.start && sourceTime <= zoom.end)?.scale ?? 1;
-  const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight) * clip.crop.zoom * punch;
+  const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight) * clip.crop.zoom * punch * timelineZoom(project, timelineTime);
   const width = video.videoWidth * scale;
   const height = video.videoHeight * scale;
   const x = (canvas.width - width) / 2 + (clip.crop.x / 100) * canvas.width;
@@ -42,6 +44,29 @@ function drawFrame(
     context.filter = filterFor(clip);
     context.drawImage(video, x, y, width, height);
     context.filter = "none";
+  }
+
+  if (clip.color.navyShadows && video.videoWidth > 0) {
+    const image = context.getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < image.data.length; i += 4) {
+      const r = image.data[i] ?? 0;
+      const g = image.data[i + 1] ?? 0;
+      const b = image.data[i + 2] ?? 0;
+      const luma = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
+      const amount = clip.color.navyShadows * Math.max(0, 1 - luma / 0.45) ** 2;
+      image.data[i] = r * (1 - amount) + 16 * amount;
+      image.data[i + 1] = g * (1 - amount) + 36 * amount;
+      image.data[i + 2] = b * (1 - amount) + 68 * amount;
+    }
+    context.putImageData(image, 0, 0);
+  }
+  if (clip.color.vignette) {
+    const radius = Math.hypot(canvas.width, canvas.height) / 2;
+    const gradient = context.createRadialGradient(canvas.width / 2, canvas.height / 2, radius * 0.2, canvas.width / 2, canvas.height / 2, radius);
+    gradient.addColorStop(0, "rgba(0,0,0,0)");
+    gradient.addColorStop(1, `rgba(0,0,0,${clip.color.vignette})`);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   const overlay = project.overlays.find((item) => timelineTime >= item.start && timelineTime <= item.end);
@@ -57,17 +82,33 @@ function drawFrame(
     if (word) {
       const owner = project.captionStyle.preset === "owner";
       const size = project.captionStyle.size * (canvas.width / 720);
-      context.font = owner ? `italic 800 ${size}px Poppins, sans-serif` : `600 ${size}px CDBody, sans-serif`;
+      context.font = owner ? `italic 800 ${size}px CDCaption, sans-serif` : `600 ${size}px CDBody, sans-serif`;
       context.textAlign = "center";
       context.textBaseline = "middle";
       context.fillStyle = project.captionStyle.color;
       const styled = context as CanvasRenderingContext2D & { letterSpacing?: string };
-      styled.letterSpacing = owner ? "-2px" : "0px";
-      context.fillText(word.word.toLowerCase(), canvas.width / 2, canvas.height * (project.captionStyle.position / 100), canvas.width * 0.92);
+      styled.letterSpacing = owner ? `${-0.05 * size}px` : "0px";
+      context.save();
+      const start = wordTimelineTime(project, word) ?? timelineTime;
+      const pop = owner ? captionScale(timelineTime - start) : 1;
+      context.translate(canvas.width / 2, canvas.height * (project.captionStyle.position / 100));
+      context.scale(pop, pop);
+      if (owner) {
+        context.shadowColor = "rgba(0,0,0,0.5)";
+        context.shadowBlur = 4;
+        context.shadowOffsetY = 2;
+      }
+      context.fillText(word.word.toLowerCase(), 0, 0, canvas.width * 0.92);
+      context.restore();
       styled.letterSpacing = "0px";
     }
   }
   context.restore();
+}
+
+export async function loadCaptionFont() {
+  const fonts = await document.fonts.load('italic 800 64px CDCaption');
+  if (!fonts.length) throw new Error("The Font caption font could not load. Try again before applying or exporting captions.");
 }
 
 async function renderWebM(
@@ -105,10 +146,12 @@ async function renderWebM(
   let completed = 0;
   try {
     await audioContext.resume();
-    await document.fonts?.load('italic 800 64px Poppins');
+    await loadCaptionFont();
     recorder.start(250);
     for (const clip of project.clips) {
-      const asset = assets.find((item) => item.sourceId === clip.sourceId)!;
+      const asset = assets.find((item) => item.sourceId === clip.sourceId);
+      if (!asset) throw new Error("The original clip is unavailable.");
+      if (recorder.state === "recording") recorder.pause();
       onProgress(completed / total, `Rendering ${clip.name}`);
       video.src = asset.url;
       if (video.readyState < 1) await waitFor("loadedmetadata", video);
@@ -120,6 +163,8 @@ async function renderWebM(
         video.currentTime = seekTarget;
         await seeked;
       }
+      drawFrame(context, canvas, video, project, clip, transcript, clipStart(project, clip.id));
+      if (recorder.state === "paused") recorder.resume();
       await video.play();
       await new Promise<void>((resolve) => {
         const draw = () => {

@@ -1,4 +1,4 @@
-import type { EditOperation } from "@/lib/ai/contracts";
+import type { EditOperation } from "./contracts";
 import { makeLocalId } from "./session-store";
 import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./types";
 
@@ -75,7 +75,7 @@ export function activeWord(project: EditorProject, transcript: TranscriptWord[],
     if (word.clipId !== clip.originId && word.clipId !== clip.id) return false;
     const start = wordTimelineTime(project, word);
     if (start === null) return false;
-    const duration = Math.max(0.08, (word.end - word.start) / clip.speed);
+    const duration = Math.max(0, (Math.min(word.end, clip.trimOut) - word.start) / clip.speed);
     return timelineTime >= start && timelineTime < start + duration;
   });
 }
@@ -99,10 +99,10 @@ function removeRanges(project: EditorProject, ranges: { clipId: string; start: n
     const segments: EditorClip[] = [];
     let cursor = clip.trimIn;
     for (const range of relevant) {
-      if (range.start - cursor > 0.04) segments.push({ ...clip, id: makeLocalId("clip"), trimIn: cursor, trimOut: range.start, crop: { ...clip.crop }, color: { ...clip.color }, zooms: [...clip.zooms] });
+      if (range.start > cursor) segments.push({ ...clip, id: makeLocalId("clip"), trimIn: cursor, trimOut: range.start, crop: { ...clip.crop }, color: { ...clip.color }, zooms: [...clip.zooms] });
       cursor = Math.max(cursor, range.end);
     }
-    if (clip.trimOut - cursor > 0.04) segments.push({ ...clip, id: makeLocalId("clip"), trimIn: cursor, trimOut: clip.trimOut, crop: { ...clip.crop }, color: { ...clip.color }, zooms: [...clip.zooms] });
+    if (clip.trimOut > cursor) segments.push({ ...clip, id: makeLocalId("clip"), trimIn: cursor, trimOut: clip.trimOut, crop: { ...clip.crop }, color: { ...clip.color }, zooms: [...clip.zooms] });
     const index = project.clips.findIndex((item) => item.id === clip.id);
     project.clips.splice(index, 1, ...segments);
   }
@@ -111,6 +111,12 @@ function removeRanges(project: EditorProject, ranges: { clipId: string; start: n
 export function applyOperations(original: EditorProject, operations: EditOperation[]): EditorProject {
   const project = cloneProject(original);
   for (const operation of operations) {
+    if (operation.type === "pushIn") {
+      project.pushIns = [...(project.pushIns ?? []).filter((item) => item.start !== operation.start), {
+        start: operation.start, duration: operation.duration, from: operation.from, to: operation.to,
+      }];
+      continue;
+    }
     if (operation.type === "removeSilence") {
       if (operation.ranges?.length) removeRanges(project, operation.ranges);
       continue;
@@ -134,6 +140,7 @@ export function applyOperations(original: EditorProject, operations: EditOperati
     if (operation.type === "color") {
       for (const clip of targets(project, operation.clipId)) {
         clip.color = {
+          ...clip.color,
           brightness: operation.brightness ?? clip.color.brightness,
           contrast: operation.contrast ?? clip.color.contrast,
           saturation: operation.saturation ?? clip.color.saturation,
@@ -199,5 +206,6 @@ export function describeOperation(operation: EditOperation) {
     case "captions": return operation.enabled ? "Turn captions on" : "Turn captions off";
     case "textOverlay": return `Add text: ${operation.text}`;
     case "zoom": return `Add ${operation.scale}x punch-in`;
+    case "pushIn": return `Slow push-in from ${operation.from.toFixed(2)} to ${operation.to.toFixed(2)} over ${operation.duration}s`;
   }
 }

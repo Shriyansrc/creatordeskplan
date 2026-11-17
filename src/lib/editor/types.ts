@@ -11,7 +11,8 @@ export type ClipAsset = {
 };
 
 export type CropSettings = { x: number; y: number; zoom: number };
-export type ColorSettings = { brightness: number; contrast: number; saturation: number; temperature: number };
+export type ColorSettings = { brightness: number; contrast: number; saturation: number; temperature: number; navyShadows?: number; vignette?: number };
+export type PushIn = { start: number; duration: number; from: number; to: number };
 export type ZoomPunch = { id: string; start: number; end: number; scale: number };
 
 export type EditorClip = {
@@ -42,6 +43,7 @@ export type TranscriptWord = { id: string; clipId: string; word: string; start: 
 
 export type EditorProject = {
   clips: EditorClip[];
+  pushIns?: PushIn[];
   ratio: Ratio;
   captionsEnabled: boolean;
   captionStyle: CaptionStyle;

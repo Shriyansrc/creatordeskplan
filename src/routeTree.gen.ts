@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DeskRouteImport } from './routes/desk'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as ApiLinkMetaRouteImport } from './routes/api/link-meta'
 import { Route as DeskIndexRouteImport } from './routes/desk.index'
 import { Route as DeskCreateRouteImport } from './routes/desk.create'
@@ -52,6 +53,11 @@ const DeskRoute = DeskRouteImport.update({
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLinkMetaRoute = ApiLinkMetaRouteImport.update({
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteWithChildren
   '/setup': typeof SetupRoute
+  '/welcome': typeof WelcomeRoute
   '/api/link-meta': typeof ApiLinkMetaRoute
   '/desk/create': typeof DeskCreateRoute
   '/desk/editor': typeof DeskEditorRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/setup': typeof SetupRoute
+  '/welcome': typeof WelcomeRoute
   '/api/link-meta': typeof ApiLinkMetaRoute
   '/desk/create': typeof DeskCreateRoute
   '/desk/editor': typeof DeskEditorRoute
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/desk': typeof DeskRouteWithChildren
   '/setup': typeof SetupRoute
+  '/welcome': typeof WelcomeRoute
   '/api/link-meta': typeof ApiLinkMetaRoute
   '/desk/create': typeof DeskCreateRoute
   '/desk/editor': typeof DeskEditorRoute
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/'
     | '/desk'
     | '/setup'
+    | '/welcome'
     | '/api/link-meta'
     | '/desk/create'
     | '/desk/editor'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/setup'
+    | '/welcome'
     | '/api/link-meta'
     | '/desk/create'
     | '/desk/editor'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/'
     | '/desk'
     | '/setup'
+    | '/welcome'
     | '/api/link-meta'
     | '/desk/create'
     | '/desk/editor'
@@ -377,6 +389,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeskRoute: typeof DeskRouteWithChildren
   SetupRoute: typeof SetupRoute
+  WelcomeRoute: typeof WelcomeRoute
   ApiLinkMetaRoute: typeof ApiLinkMetaRoute
   ApiAiAudienceRoute: typeof ApiAiAudienceRoute
   ApiAiCaptionsRoute: typeof ApiAiCaptionsRoute
@@ -418,6 +431,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/link-meta': {
@@ -633,6 +653,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeskRoute: DeskRouteWithChildren,
   SetupRoute: SetupRoute,
+  WelcomeRoute: WelcomeRoute,
   ApiLinkMetaRoute: ApiLinkMetaRoute,
   ApiAiAudienceRoute: ApiAiAudienceRoute,
   ApiAiCaptionsRoute: ApiAiCaptionsRoute,

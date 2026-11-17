@@ -8,22 +8,22 @@ export async function detectSilence(clip: EditorClip, asset: ClipAsset, threshol
   const context = new AudioContextClass();
   try {
     const buffer = await context.decodeAudioData(await asset.file.arrayBuffer());
-    const channel = buffer.getChannelData(0);
+    const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index));
+    const length = buffer.length;
     const windowSize = Math.max(1, Math.floor(buffer.sampleRate * 0.02));
     const ranges: SilenceRange[] = [];
     let silentStart: number | null = null;
-    for (let offset = 0; offset < channel.length; offset += windowSize) {
-      const endOffset = Math.min(channel.length, offset + windowSize);
-      let sum = 0;
-      for (let i = offset; i < endOffset; i++) {
-        const sample = channel[i] ?? 0;
-        sum += sample * sample;
-      }
-      const rms = Math.sqrt(sum / Math.max(1, endOffset - offset));
+    for (let offset = 0; offset < length; offset += windowSize) {
+      const endOffset = Math.min(length, offset + windowSize);
+      const rms = Math.max(...channels.map((channel) => {
+        let sum = 0;
+        for (let i = offset; i < endOffset; i++) sum += (channel[i] ?? 0) ** 2;
+        return Math.sqrt(sum / Math.max(1, endOffset - offset));
+      }));
       const time = offset / buffer.sampleRate;
       if (rms < threshold && silentStart === null) silentStart = time;
-      if ((rms >= threshold || endOffset === channel.length) && silentStart !== null) {
-        const end = endOffset / buffer.sampleRate;
+      if ((rms >= threshold || endOffset === length) && silentStart !== null) {
+        const end = rms >= threshold ? time : endOffset / buffer.sampleRate;
         if (end - silentStart >= minDuration) {
           const startClamped = Math.max(clip.trimIn, silentStart);
           const endClamped = Math.min(clip.trimOut, end);
