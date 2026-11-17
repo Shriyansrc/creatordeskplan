@@ -233,7 +233,7 @@ async function convertToMp4(webm: Blob, onProgress: (value: number, label: strin
   try {
     ffmpeg.on("progress", ({ progress }) => onProgress(0.82 + Math.max(0, Math.min(1, progress)) * 0.17, "Converting to MP4 on this device…"));
     ffmpeg.on("log", ({ message }) => { if (message) onProgress(0.84, "Converting to MP4 on this device: " + message.slice(0, 70)); });
-    await ffmpeg.load({ coreURL, wasmURL });
+    await Promise.race([ffmpeg.load({ coreURL, wasmURL }), new Promise<never>((_, reject) => setTimeout(() => reject(new Error("The MP4 converter did not load within 60 seconds. Choose WebM and export again.")), 60000))]);
     await ffmpeg.writeFile("creator-desk-input.webm", await fetchFile(webm));
     const code = await ffmpeg.exec(["-i", "creator-desk-input.webm", "-vf", "fps=30", "-c:v", "libx264", "-preset", "ultrafast", "-threads", "1", "-pix_fmt", "yuv420p", "-c:a", "aac", "-movflags", "+faststart", "creator-desk-output.mp4"], 240000);
     if (code === 1) throw new Error("MP4 conversion took too long on this device. Download WebM instead.");
