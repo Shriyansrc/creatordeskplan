@@ -1,3 +1,4 @@
+import { guardGeneration } from "@/lib/references/quota.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { generateSpeech } from "@lovable.dev/ai-gateway";
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/api/ai/speech")({
           return Response.json({ error: "Send the text to read aloud (2 to 1600 characters)." }, { status: 400 });
         }
         try {
+          const denied = await guardGeneration(request);
+          if (denied) return denied;
           const lang = input.language && input.language !== "English" ? ` in ${input.language === "Hinglish" ? "natural Hinglish, Hindi and English mixed, with an Indian accent" : input.language}` : "";
           const prompt = input.style || lang ? `Say this${lang} ${input.style ?? ""}: ${input.text}`.replace("  ", " ") : input.text;
           const audio = await generateSpeech({ model: "google/gemini-2.5-flash-tts", contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } } } as never);
