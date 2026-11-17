@@ -32,6 +32,7 @@ export type EditorClip = {
 };
 
 export type CaptionStyle = {
+  karaoke?: boolean;
   preset: "owner" | "plain";
   size: number;
   color: string;
