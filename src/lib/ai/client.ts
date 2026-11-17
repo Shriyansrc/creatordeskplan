@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
 export type AIConnection =
@@ -26,11 +27,11 @@ export function useAIConnection(): AIConnection {
 export async function callAI<I, O>(path: string, input: I): Promise<O> {
   const response = await fetch(`/api/ai/${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: await generationHeaders(),
     body: JSON.stringify(input),
   });
   const body = (await response.json()) as { connected?: boolean; reason?: string; error?: string; data?: O };
-  if (response.status === 503 || body.connected === false) throw new Error(body.reason || "AI provider not configured");
+  if (response.status === 503 || body.connected === false) throw new Error(body.error || body.reason || "AI provider not configured");
   if (!response.ok || body.error) throw new Error(body.error || `AI request failed with HTTP ${response.status}`);
   if (body.data === undefined) throw new Error("AI route returned no data");
   return body.data;
@@ -56,4 +57,11 @@ export function useServiceStatus(): ServiceStatus {
     return () => controller.abort();
   }, []);
   return status;
+}
+
+export async function generationHeaders(): Promise<Record<string, string>> {
+  const { data, error } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (error || !token) throw new Error("Sign in from Settings to use AI generation. Local editing still works without an account.");
+  return { "content-type": "application/json", authorization: `Bearer ${token}` };
 }
