@@ -52,6 +52,11 @@ export function getSessionClips() {
   return clips;
 }
 
+export function clearSessionExport() {
+  if (exportFile) URL.revokeObjectURL(exportFile.url);
+  exportFile = null;
+}
+
 export function saveSessionExport(blob: Blob, name: string) {
   if (exportFile) URL.revokeObjectURL(exportFile.url);
   const url = URL.createObjectURL(blob);
