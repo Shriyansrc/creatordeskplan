@@ -62,12 +62,12 @@ function Plan() {
   const goalWithPurpose = [p.goal, p.purpose].filter(Boolean).join(": ").slice(0, 300);
   const formatLabel = (t: PlanTopic) => t.format ? `${t.format} post` : "Format not stored";
   const doResearch = () => run("research", async () => {
-    const r = await runResearch({ ...base, goal: goalWithPurpose, audienceNotes: (p.audience + ". " + p.audienceNotes).slice(0, 3900), painPoints: p.painPoints.slice(0, 20) });
+    const r = await runResearch({ ...base, goal: goalWithPurpose, audienceNotes: (p.audience + ". " + p.audienceNotes).slice(0, 3900), painPoints: p.painPoints.slice(0, 20), ...(p.contentTypes.length ? { contentTypes: p.contentTypes } : {}) });
     patchDesk({ research: { key, data: r, at: new Date().toISOString() } });
   });
   const doPlan = () => run("plan", async () => {
     if (!research) throw new Error("Run research first.");
-    const r = await runPlan({ ...base, goal: goalWithPurpose, research, ...(p.language ? { language: p.language } : {}) });
+    const r = await runPlan({ ...base, goal: goalWithPurpose, research, ...(p.language ? { language: p.language } : {}), ...(p.contentTypes.length ? { contentTypes: p.contentTypes } : {}) });
     patchDesk({ plan: { key, data: r, at: new Date().toISOString(), startDate: `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}` } });
     setTab("30-day plan");
   });
@@ -75,7 +75,7 @@ function Plan() {
   const script = topic ? d.scripts[topic.id] : undefined;
   const doScript = (instruction?: string) => run("script", async () => {
     if (!topic) return;
-    const r = await runScript({ depth: scriptDepth, topic: topic.title, niche, goal: goalWithPurpose, platform: topic.platform, ...(topic.format ? { format: topic.format } : {}), painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
+    const r = await runScript({ depth: scriptDepth, topic: topic.title, niche, goal: goalWithPurpose, platform: topic.platform, ...(p.contentTypes.length ? { contentTypes: p.contentTypes } : {}), ...(topic.format ? { format: topic.format } : {}), painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
     patchDesk({ scripts: { ...d.scripts, [topic.id]: { data: r, at: new Date().toISOString() } } });
   });
 
