@@ -100,21 +100,21 @@ function parseDdg(html: string): Raw[] {
 }
 
 function parseBing(html: string): Raw[] {
-  const out: Raw[] = [];
-  const blocks = html.split(/<li class="b_algo"/).slice(1);
-  for (const b of blocks) {
-    const a = b.match(/<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
-    if (!a) continue;
-    const sn = b.match(/<p[^>]*class="[^"]*b_lineclamp[^"]*"[^>]*>([\s\S]*?)<\/p>/) ?? b.match(/<p[^>]*>([\s\S]*?)<\/p>/);
-    out.push({ url: decodeBingHref(a[1]!), title: strip(a[2]!), snippet: sn ? strip(sn[1]!) : "" });
+  const byUrl = new Map<string, Raw>();
+  for (const m of html.matchAll(/<a\b[^>]*?href="(https?:\/\/www\.bing\.com\/ck\/a[^"]+)"[^>]*>([\s\S]*?)<\/a>/g)) {
+    const url = decodeBingHref(m[1]!);
+    const title = strip(m[2]!);
+    const prev = byUrl.get(url);
+    if (!prev) byUrl.set(url, { url, title, snippet: "" });
+    else if (!prev.title && title) prev.title = title;
   }
-  return out;
+  return Array.from(byUrl.values());
 }
 
 function parseBingVideos(html: string): Raw[] {
   const out: Raw[] = [];
-  for (const m of html.matchAll(/&quot;murl&quot;:&quot;(https?:[^&]+?)&quot;[\s\S]{0,1200}?&quot;t&quot;:&quot;([^&]*?)&quot;/g)) {
-    out.push({ url: decodeURIComponent(entities(m[1]!)), title: entities(m[2]!), snippet: "" });
+  for (const m of html.matchAll(/&quot;murl&quot;:&quot;(https?:[^&]+?)&quot;/g)) {
+    out.push({ url: entities(m[1]!), title: "", snippet: "" });
   }
   return out;
 }
