@@ -26,7 +26,7 @@ function videoEvent(video:HTMLVideoElement,event:string,change?:()=>void) {
 }
 export async function renderOffline(project:EditorProject,assets:ClipAsset[],transcript:TranscriptWord[],canvas:HTMLCanvasElement,draw:(video:HTMLVideoElement,clip:EditorClip,time:number)=>void,onProgress:(value:number,label:string)=>void) {
   if(typeof VideoEncoder==='undefined'||typeof VideoFrame==='undefined')throw Error('Frame-by-frame export needs a current browser with WebCodecs, such as Chrome or Edge. No real-time fallback was used.');
-  const fps=30,total=projectDuration(project),count=Math.ceil(total*fps);
+  const fps=30,total=projectDuration(project),count=Math.max(1,Math.ceil(total*fps-1e-4));
   if(!Number.isFinite(total)||total<=0)throw Error('Add a valid clip before exporting.');
   const config:VideoEncoderConfig={codec:'vp8',width:canvas.width,height:canvas.height,bitrate:5_000_000,framerate:fps,latencyMode:'quality'};
   if(!(await VideoEncoder.isConfigSupported(config)).supported)throw Error('This browser cannot encode the required offline VP8 video. No real-time fallback was used.');
