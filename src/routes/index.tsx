@@ -239,7 +239,7 @@ function Vw({
     </div>
   );
 }
-const DEPTH: Record<string, number> = { cut: 14, flash: 22, "yp-human": 22, yp1: 32, cost: 26, sik: 36, "sik-720": 36 };
+const DEPTH: Record<string, number> = { cut: 14, flash: 22, "yp-green": 22, yp1: 32, cost: 26, sik: 36, "sik-720": 36 };
 function useReduced(): boolean {
   const [r, setR] = useState(false);
   useEffect(() => {
@@ -519,8 +519,8 @@ function Landing({ go }: { go: (s: Screen) => void }) {
             name="cut-by-text.mov"
           />
           <Vw
-            k="yp-human"
-            poster={"/media/yp-human.jpg"}
+            k="yp-green"
+            poster={"/media/yp-green.jpg"}
             {...P}
             style={{
               left: 885,
