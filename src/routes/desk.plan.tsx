@@ -72,7 +72,7 @@ function Plan() {
   const script = topic ? d.scripts[topic.id] : undefined;
   const doScript = (instruction?: string) => run("script", async () => {
     if (!topic) return;
-    const r = await runScript({ topic: topic.title, niche, goal: p.goal, platform: topic.platform, painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
+    const r = await runScript({ topic: topic.title, niche, goal: p.goal, platform: topic.platform, painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
     patchDesk({ scripts: { ...d.scripts, [topic.id]: { data: r, at: new Date().toISOString() } } });
   });
 
@@ -172,6 +172,8 @@ function Plan() {
                   </label>
                 ))}
                 <div className="dk-item"><div className="dk-label">Hashtags</div><p>{script.data.hashtags.join(" ")}</p><p style={{ marginTop: 6 }}>Search phrase: {script.data.seoPhrase}</p></div>
+                {script.data.title && <div className="dk-item"><div className="dk-label">Title</div><p>{script.data.title}</p></div>}
+                {script.data.caption && <div className="dk-item"><div className="dk-label">Caption</div><p style={{ whiteSpace: "pre-wrap" }}>{script.data.caption}</p></div>}
                 <ListenButton text={[script.data.hook, script.data.problem, script.data.solution, script.data.cta].join(" ")} />
                 <Link to="/desk/create" className="dk-btn">Next: record or create</Link>
               </div>

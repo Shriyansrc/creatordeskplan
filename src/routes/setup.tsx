@@ -40,7 +40,7 @@ function Setup() {
   const hint: Record<number, string> = {
     1: "No card is pre-picked. You can change this later.",
     2: "Empty until you type. You can change this later.",
-    3: "Pain points are AI estimates until research checks them.",
+    3: "Research checks these against live sources later.",
     4: "Nothing is pre-picked. Posting always needs your approval.",
     5: "Saved to your profile. Edit anytime in Settings.",
   };

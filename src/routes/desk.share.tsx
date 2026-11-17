@@ -15,7 +15,7 @@ function Share() {
   const [copied, setCopied] = useState("");
   const sc = d.scripts[id]?.data;
   const file = getSessionExport();
-  const caption = sc ? `${sc.hook}\n\n${sc.cta}\n\n${sc.hashtags.join(" ")}` : "";
+  const caption = sc ? (sc.caption ? `${sc.caption}\n\n${sc.hashtags.join(" ")}` : `${sc.hook}\n\n${sc.cta}\n\n${sc.hashtags.join(" ")}`) : "";
   const copy = async (t: string, k: string) => { try { await navigator.clipboard.writeText(t); setCopied(k); } catch { setCopied(""); } };
   return (
     <>
