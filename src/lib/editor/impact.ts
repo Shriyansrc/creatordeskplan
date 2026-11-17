@@ -57,7 +57,7 @@ export function drawImpact(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   context.restore();
 
   context.save();
-  const size = style.size * s;
+  const size = style.size * 1.1 * s;
   context.font = captionFontString(style, "caption", size);
   context.textAlign = "left";
   context.textBaseline = "middle";
@@ -65,7 +65,7 @@ export function drawImpact(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   const widths = cap.line.map((word) => context.measureText(word.text).width);
   const total = widths.reduce((sum, width) => sum + width, 0) + gap * (cap.line.length - 1);
   const lineScale = Math.min(1, (canvas.width * 0.9) / Math.max(1, total));
-  context.translate(canvas.width / 2, centreY);
+  context.translate(canvas.width / 2, centreY + impactSize * 0.26);
   context.scale(lineScale, lineScale);
   let x = -total / 2;
   cap.line.forEach((word, index) => {
