@@ -16,8 +16,8 @@ export function errorText(e: unknown) {
 
 import type { PlanResult, ResearchResult, ScriptResult, ScriptInput } from "@/lib/ai/contracts";
 import type { Platform } from "@/lib/ai/contracts";
-export const runResearch = (i: { topic: string; goal: string; niche: string; platforms: Platform[]; audienceNotes?: string; painPoints?: string[] }) => callAI<typeof i, ResearchResult>("research", i);
-export const runPlan = (i: { topic: string; goal: string; niche: string; platforms: Platform[]; research: ResearchResult; language?: string }) => callAI<typeof i, PlanResult>("plan", i);
+export const runResearch = (i: { topic: string; goal: string; niche: string; platforms: Platform[]; audienceNotes?: string; painPoints?: string[]; contentTypes?: string[] }) => callAI<typeof i, ResearchResult>("research", i);
+export const runPlan = (i: { topic: string; goal: string; niche: string; platforms: Platform[]; research: ResearchResult; language?: string; contentTypes?: string[] }) => callAI<typeof i, PlanResult>("plan", i);
 export const runScript = (i: ScriptInput) => callAI<ScriptInput, ScriptResult>("script", i);
 
 export const analyseReference = (i: { platform: "yt" | "ig" | "x"; link: string; views?: string; likes?: string; pasted: string; topic: string; niche?: string }) => callAI<typeof i, ReferenceResult>("reference", i);
