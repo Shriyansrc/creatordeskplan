@@ -1,0 +1,13 @@
+# Local person-mask build assets
+
+MediaPipe Tasks Vision is pinned to 0.10.32. The prepare-assets script copies its WASM runtime into public/creator-vision on dev/build, then decodes the fixed selfie model chunks and verifies SHA256. No model is fetched at runtime or during the build.
+
+vision.js is a classic-worker IIFE bundle built from that package with esbuild 0.25.12:
+
+    esbuild node_modules/@mediapipe/tasks-vision/vision_bundle.mjs --bundle --format=iife --global-name=Vision --outfile=vendor/creator-vision/vision.js
+
+The classic-worker route was tested because the module-worker alternatives failed during model initialization. Keep worker.js in public/creator-vision. Do not swap a runtime CDN loader without independent testing and timeout/error recovery.
+
+License and original model-card URL are in NOTICE.txt. Model is stored as base64 only to support text-only repository editing, not as an executable payload. The decoding script validates its checksum before writing the tflite file. The Apache 2.0 license is included.
+
+Local limitations: up to 30 selected source seconds, 8 fps masks, 192px input width, may include multiple people and rough edges. Session-only cache is keyed by source identifier and source time, so preview/export use the same trim/speed/crop mapping. Export refuses incomplete mask coverage. No claim of subject-perfect masking, mobile speed, face-tracking captions or full reference treatment.
