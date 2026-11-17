@@ -120,3 +120,4 @@ textarea.dk-field{resize:vertical;min-height:110px}
 /* Calendar format labels remain distinct from topic titles. */
 .dk-cal button span,.dk-cal button small{display:block;line-height:1.4}
 .dk-cal button small{margin-top:5px;font-size:12px;color:var(--mute)}
+@media(max-width:640px){.dk-cal{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.dk-cal button{min-height:96px;padding:8px}.dk-cal button span{display:block}}
