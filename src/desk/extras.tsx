@@ -132,7 +132,7 @@ export function ListenButton({ text }: { text: string }) {
     setBusy(true);
     setErr("");
     try {
-      const res = await fetch("/api/ai/speech", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: text.slice(0, 1600), style: "clearly and naturally, like a friendly teacher" }) });
+      const res = await fetch("/api/ai/speech", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: text.slice(0, 1600), style: "clearly and naturally, like a friendly teacher", ...(getDesk().profile.language ? { language: getDesk().profile.language } : {}) }) });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `Voice failed with HTTP ${res.status}`);

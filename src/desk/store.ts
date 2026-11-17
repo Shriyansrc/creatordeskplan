@@ -108,6 +108,8 @@ export const GOALS = ["Grow my business", "Build my personal brand"] as const;
 export const TOOLS = ["Phone camera", "Camera", "Microphone", "Screen recording", "None yet"] as const;
 export const CAMERA = ["On camera", "Voice only", "Screen + voice"] as const;
 export const LANGUAGES = ["Hinglish", "Hindi", "English"] as const;
+// Languages Gemini TTS lists as supported (it detects the language from the text). Scripts are written in the same language.
+export const OTHER_LANGUAGES = ["Arabic", "Bengali", "Bulgarian", "Burmese", "Chinese (Mandarin)", "Croatian", "Czech", "Danish", "Dutch", "Finnish", "French", "German", "Greek", "Gujarati", "Hebrew", "Hungarian", "Indonesian", "Italian", "Japanese", "Kannada", "Korean", "Malay", "Malayalam", "Marathi", "Nepali", "Norwegian", "Odia", "Persian", "Polish", "Portuguese", "Punjabi", "Romanian", "Russian", "Serbian", "Sinhala", "Slovak", "Spanish", "Swahili", "Swedish", "Tamil", "Telugu", "Thai", "Turkish", "Ukrainian", "Urdu", "Vietnamese"] as const;
 export const PLATFORM_COPY: Record<Platform, { name: string; line: string }> = {
   ig: { name: "Instagram", line: "Reels and carousels. Best for discovery." },
   yt: { name: "YouTube", line: "Shorts and long videos. Best for search." },
