@@ -1,29 +1,17 @@
-import { requireExportQuality } from "./export-quality";
+import { renderOffline } from "./offline-export";
 import { needsSubjectMasks, subjectBeatError, subjectModeAt } from "./subject-beats";
 import { drawSubject, subjectMasksReady } from "./subject-mask";
 import { drawWrapping, DEFAULT_WRAPPING } from "./wrapping";
-import { withWebmDuration } from "./webm-duration";
-import { activeWord, clipDuration, clipStart, projectDuration, wordTimelineTime } from "./project";
+import { activeWord, wordTimelineTime } from "./project";
 import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./types";
 
 import { captionScale, timelineZoom } from "./talking-head";
 import { captionAt, captionCues } from "./captions";
 import { drawFisheye } from "./fisheye";
-import { prepareSoundtrack } from "./soundtrack";
 
 export const DIMENSIONS = { "9:16": [720, 1280], "1:1": [900, 900], "4:5": [864, 1080], "16:9": [1280, 720] } as const;
 const SHADOW_WEIGHTS = Float32Array.from({ length: 256 }, (_, luma) => Math.max(0, 1 - luma / (255 * 0.45)) ** 2);
 const shadowMasks = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-
-function waitFor(event: string, video: HTMLVideoElement) {
-  return new Promise<void>((resolve, reject) => {
-    const done = () => { cleanup(); resolve(); };
-    const fail = () => { cleanup(); reject(new Error("The clip could not be prepared for export.")); };
-    const cleanup = () => { video.removeEventListener(event, done); video.removeEventListener("error", fail); };
-    video.addEventListener(event, done, { once: true });
-    video.addEventListener("error", fail, { once: true });
-  });
-}
 
 function filterFor(clip: EditorClip) {
   const warmth = clip.color.temperature;
@@ -145,95 +133,6 @@ export async function loadCaptionFont() {
   if (!fonts.length) throw new Error("The Font caption font could not load. Try again before applying or exporting captions.");
 }
 
-async function renderWebM(
-  project: EditorProject,
-  assets: ClipAsset[],
-  transcript: TranscriptWord[],
-  onProgress: (value: number, label: string) => void,
-): Promise<Blob> {
-  if (!project.clips.length) throw new Error("Add at least one clip before exporting.");
-  if (typeof MediaRecorder === "undefined") throw new Error("This browser does not support local video recording. Try current Chrome, Edge, or Firefox.");
-  const missing = project.clips.find((clip) => !assets.some((asset) => asset.sourceId === clip.sourceId));
-  if (missing) throw new Error(`${missing.name} is no longer available. Choose the original file again on the Clips screen.`);
-  const canvas = document.createElement("canvas");
-  [canvas.width, canvas.height] = DIMENSIONS[project.ratio];
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas rendering is unavailable in this browser.");
-  const video = document.createElement("video");
-  video.muted = true;
-  video.playsInline = true;
-  video.preload = "auto";
-  const stream = canvas.captureStream(30);
-  const audioContext = new AudioContext();
-  const audioDestination = audioContext.createMediaStreamDestination();
-  const soundtrack = await prepareSoundtrack(audioContext, project, assets, transcript);
-  let audioSource: AudioBufferSourceNode | undefined;
-  for (const track of audioDestination.stream.getAudioTracks()) stream.addTrack(track);
-  const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((type) => MediaRecorder.isTypeSupported(type));
-  if (!mimeType) throw new Error("WebM recording is not supported by this browser.");
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5_000_000 });
-  const chunks: BlobPart[] = [];
-  recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-  const stopped = new Promise<void>((resolve, reject) => { recorder.onstop = () => resolve(); recorder.onerror = () => reject(new Error("The browser recorder failed during export.")); });
-  const total = projectDuration(project);
-  let completed = 0;
-  try {
-    await audioContext.resume();
-    await loadCaptionFont();
-    for (const clip of project.clips) {
-      const asset = assets.find((item) => item.sourceId === clip.sourceId);
-      if (!asset) throw new Error("The original clip is unavailable.");
-      onProgress(completed / total, `Rendering ${clip.name}`);
-      video.src = asset.url;
-      if (video.readyState < 1) await waitFor("loadedmetadata", video);
-      if (video.readyState < 2) await waitFor("loadeddata", video);
-      video.playbackRate = clip.speed;
-      const seekTarget = Math.min(clip.trimIn, Math.max(0, video.duration - 0.01));
-      if (Math.abs(video.currentTime - seekTarget) > 0.01) {
-        const seeked = waitFor("seeked", video);
-        video.currentTime = seekTarget;
-        await seeked;
-      }
-      drawFrame(context, canvas, video, project, clip, transcript, clipStart(project, clip.id));
-      if (recorder.state === "inactive") recorder.start(250);
-      if (recorder.state === "paused") recorder.resume();
-      audioSource = audioContext.createBufferSource();
-      audioSource.buffer = soundtrack.mix;
-      audioSource.connect(audioDestination);
-      audioSource.start(0, clipStart(project, clip.id), clipDuration(clip));
-      await video.play();
-      await new Promise<void>((resolve) => {
-        const draw = () => {
-          const timelineTime = clipStart(project, clip.id) + Math.max(0, video.currentTime - clip.trimIn) / clip.speed;
-          drawFrame(context, canvas, video, project, clip, transcript, timelineTime);
-          onProgress(Math.min(0.99, (completed + Math.max(0, video.currentTime - clip.trimIn) / clip.speed) / total), `Rendering ${clip.name}`);
-          if (video.currentTime >= clip.trimOut - 0.015 || video.ended) resolve();
-          else requestAnimationFrame(draw);
-        };
-        requestAnimationFrame(draw);
-      });
-      video.pause();
-      audioSource.stop();
-      audioSource.disconnect();
-      audioSource = undefined;
-      if (recorder.state === "recording") recorder.pause();
-      completed += clipDuration(clip);
-    }
-    recorder.stop();
-    await stopped;
-    const rendered = await withWebmDuration(new Blob(chunks, { type: "video/webm" }), total * 1000);
-    await requireExportQuality(rendered, total);
-    return rendered;
-  } finally {
-    video.pause();
-    if (recorder.state !== "inactive") recorder.stop();
-    for (const track of stream.getTracks()) track.stop();
-    audioSource?.stop();
-    audioSource?.disconnect();
-    await audioContext.close();
-  }
-}
-
 async function convertToMp4(webm: Blob, onProgress: (value: number, label: string) => void) {
   onProgress(0.82, "Loading the local MP4 converter…");
   const [{ FFmpeg }, { fetchFile }, { default: coreURL }, { default: wasmURL }] = await Promise.all([
@@ -269,8 +168,15 @@ export async function exportProject(
   const beatError = subjectBeatError(project);
   if (beatError) throw new Error(beatError);
   if(needsSubjectMasks(project) && !subjectMasksReady(project))throw new Error('Prepare subject masks for the full edit before exporting, or choose Original footage.');
-  const webm = await renderWebM(project, assets, transcript, (value, label) => onProgress(value * (format === "mp4" ? 0.8 : 1), label));
+  const canvas = document.createElement("canvas");
+  [canvas.width, canvas.height] = DIMENSIONS[project.ratio];
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas rendering is unavailable.");
+  await loadCaptionFont();
+  const webm = await renderOffline(project, assets, transcript, canvas,
+    (video, clip, time) => drawFrame(context, canvas, video, project, clip, transcript, time),
+    (value, label) => onProgress(value * (format === "mp4" ? 0.8 : 1), label));
   const blob = format === "mp4" ? await convertToMp4(webm, onProgress) : webm;
   onProgress(1, "Export ready");
   return blob;
-              }
+                           }
