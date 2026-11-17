@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { generateSpeech } from "@lovable.dev/ai-gateway";
 
-const inputSchema = z.object({ text: z.string().trim().min(2).max(1600), style: z.string().max(200).optional() });
+const inputSchema = z.object({ text: z.string().trim().min(2).max(1600), style: z.string().max(200).optional(), language: z.string().max(40).optional() });
 
 export const Route = createFileRoute("/api/ai/speech")({
   server: {
@@ -16,7 +16,8 @@ export const Route = createFileRoute("/api/ai/speech")({
           return Response.json({ error: "Send the text to read aloud (2 to 1600 characters)." }, { status: 400 });
         }
         try {
-          const prompt = input.style ? `Say this ${input.style}: ${input.text}` : input.text;
+          const lang = input.language && input.language !== "English" ? ` in ${input.language === "Hinglish" ? "natural Hinglish, Hindi and English mixed, with an Indian accent" : input.language}` : "";
+          const prompt = input.style || lang ? `Say this${lang} ${input.style ?? ""}: ${input.text}`.replace("  ", " ") : input.text;
           const audio = await generateSpeech({ model: "google/gemini-2.5-flash-tts", contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } } } as never);
           return audio.toResponse();
         } catch (error) {
