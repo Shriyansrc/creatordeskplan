@@ -1,20 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { searchWeb, verify, type EngineLog, type WebPlatform } from "@/lib/references/web";
+import { generateResponse } from "@lovable.dev/ai-gateway";
 
-// Temporary read-only diagnostic of the keyless reference lookups.
+// Temporary read-only diagnostic: does the built-in gateway offer hosted web search?
 export const Route = createFileRoute("/api/ai/refprobe")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const q = new URL(request.url).searchParams.get("q") ?? "how to study for exams";
-        const log: EngineLog[] = [];
-        const result: Record<string, unknown> = {};
-        for (const p of ["yt", "ig", "x", "li"] as WebPlatform[]) {
-          const hits = await searchWeb(p, q, log);
-          const checked = await Promise.all(hits.slice(0, 4).map((h) => verify(h)));
-          result[p] = { found: hits.length, sample: hits.slice(0, 4).map((h) => ({ url: h.url, t: h.title.slice(0, 50), e: h.engine })), verified: checked.map((c) => c && { t: c.title.slice(0, 50), a: c.author, th: c.thumbnail ? c.thumbnail.slice(0, 55) : null, v: c.views, l: c.likes, ok: c.verified }) };
+        const u = new URL(request.url);
+        const q = u.searchParams.get("q") ?? "how to study for exams";
+        const dom = u.searchParams.get("d") ?? "youtube.com";
+        const t0 = Date.now();
+        try {
+          const res = (await generateResponse({
+            model: "openai/gpt-6.1-terra",
+            input: `Search the web for real short videos on this idea and list their page links: ${q}`,
+            tools: [{ type: "web_search", filters: { allowed_domains: [dom] }, search_context_size: "low" }],
+          } as never)) as unknown as { output?: Record<string, unknown>[]; usage?: unknown };
+          const items = res.output ?? [];
+          const cites: { url: string; title: string }[] = [];
+          for (const it of items) {
+            const content = (it["content"] as Record<string, unknown>[] | undefined) ?? [];
+            for (const c of content) for (const a of (c["annotations"] as Record<string, string>[] | undefined) ?? []) if (a["url"]) cites.push({ url: a["url"], title: String(a["title"] ?? "").slice(0, 80) });
+          }
+          return Response.json({ ms: Date.now() - t0, types: items.map((i) => i["type"]), cites: cites.slice(0, 12), usage: res.usage });
+        } catch (e) {
+          return Response.json({ ms: Date.now() - t0, error: e instanceof Error ? e.message.slice(0, 300) : "failed" });
         }
-        return Response.json({ log, result });
       },
     },
   },
