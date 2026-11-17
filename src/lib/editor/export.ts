@@ -1,3 +1,4 @@
+import { applyFrameColor } from "./color";
 import { drawMotion, motionError } from "./motion-scenes";
 import { renderOffline } from "./offline-export";
 import { needsSubjectMasks, subjectBeatError, subjectModeAt } from "./subject-beats";
@@ -8,16 +9,10 @@ import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./typ
 
 import { captionScale, timelineZoom } from "./talking-head";
 import { captionAt, captionCues } from "./captions";
-import { drawFisheye } from "./fisheye";
 
 export const DIMENSIONS = { "9:16": [720, 1280], "1:1": [900, 900], "4:5": [864, 1080], "16:9": [1280, 720] } as const;
 const SHADOW_WEIGHTS = Float32Array.from({ length: 256 }, (_, luma) => Math.max(0, 1 - luma / (255 * 0.45)) ** 2);
 const shadowMasks = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-
-function filterFor(clip: EditorClip) {
-  const warmth = clip.color.temperature;
-  return `brightness(${clip.color.brightness}%) contrast(${clip.color.contrast}%) saturate(${clip.color.saturation}%) sepia(${Math.abs(warmth)}%) hue-rotate(${warmth < 0 ? 180 : 0}deg)`;
-}
 
 export function drawFrame(
   context: CanvasRenderingContext2D,
@@ -40,9 +35,7 @@ export function drawFrame(
   const y = (canvas.height - height) / 2 + (clip.crop.y / 100) * canvas.height;
   // Audio-only clips (for example an AI voice track) have no frame: keep the background.
   if (video.videoWidth > 0 && video.videoHeight > 0) {
-    context.filter = filterFor(clip);
     context.drawImage(video, x, y, width, height);
-    context.filter = "none";
   }
 
   if (clip.color.navyShadows && video.videoWidth > 0) {
@@ -88,8 +81,9 @@ export function drawFrame(
       context.fillStyle='#111722';context.fillRect(0,0,canvas.width,canvas.height);context.font='600 28px sans-serif';context.textAlign='center';context.fillStyle='#ffffff';context.fillText('Prepare subject masks to preview this look',canvas.width/2,canvas.height/2,canvas.width*.9);context.restore();return;
     }
   }
+  applyFrameColor(context, canvas, clip.color);
   const overlay = project.overlays.find((item) => timelineTime >= item.start && timelineTime <= item.end);
-  if (project.fisheye?.enabled) drawFisheye(context, canvas, project.fisheye, timelineTime);
+  // Retired lens state in older saved projects is intentionally ignored in preview and export.
   if (overlay) {
     context.font = "600 42px CDBody, sans-serif";
     context.textAlign = "center";
