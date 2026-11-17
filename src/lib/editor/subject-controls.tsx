@@ -1,3 +1,6 @@
+import { makeLocalId } from "./session-store";
+import { projectDuration } from "./project";
+import { needsSubjectMasks, subjectBeatError } from "./subject-beats";
 import { useEffect, useRef, useState } from "react";
 import { prepareSubjectMasks, subjectMasksReady } from "./subject-mask";
 import type { ClipAsset, EditorProject } from "./types";
@@ -10,6 +13,10 @@ export function SubjectControls({
   assets: ClipAsset[];
   change: (project: EditorProject) => void;
 }) {
+  const [beatStart, setBeatStart] = useState("0");
+  const [beatEnd, setBeatEnd] = useState("1");
+  const [beatMode, setBeatMode] = useState<"sticker" | "silhouette">("sticker");
+  const [beatMessage, setBeatMessage] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [, refresh] = useState(0);
@@ -86,13 +93,30 @@ export function SubjectControls({
           </option>
         </select>
       </label>
-      {project.subjectMode && project.subjectMode !== "original" && !ready && (
+      {needsSubjectMasks(project) && !ready && (
         <p role="alert">
           Subject masks are missing for part of this edit. Prepare them before
           preview or export, or choose Original footage.
         </p>
       )}
       <p role="status">{status}</p>
+      <h3>Timed subject beats</h3>
+      <p>Choose exact seconds on the edited timeline. Outside these beats, the Subject look above applies. Timing is manual, not automatic music-beat detection. Recheck after changing trim or speed.</p>
+      <div className="row" style={{ flexWrap: "wrap", alignItems: "end", gap: 10 }}>
+        <label className="lab" style={{ flex: "1 1 100px" }}>Start (seconds)<input className="field" aria-label="Subject beat start" type="number" min="0" max={projectDuration(project)} step="0.1" value={beatStart} onChange={e => setBeatStart(e.target.value)} /></label>
+        <label className="lab" style={{ flex: "1 1 100px" }}>End (seconds)<input className="field" aria-label="Subject beat end" type="number" min="0" max={projectDuration(project)} step="0.1" value={beatEnd} onChange={e => setBeatEnd(e.target.value)} /></label>
+        <label className="lab" style={{ flex: "1 1 150px" }}>Beat look<select className="field" aria-label="Subject beat look" value={beatMode} onChange={e => setBeatMode(e.target.value as typeof beatMode)}><option value="sticker">Real subject sticker</option><option value="silhouette">Real subject silhouette</option></select></label>
+        <button className="btn s g" disabled={busy || !ready} onClick={() => {
+          if (!beatStart.trim() || !beatEnd.trim()) { setBeatMessage("Enter both start and end seconds."); return; }
+          const next = { ...project, subjectBeats: [...(project.subjectBeats ?? []), { id: makeLocalId("beat"), start: Number(beatStart), end: Number(beatEnd), mode: beatMode }] };
+          const error = subjectBeatError(next);
+          if (error) { setBeatMessage(error); return; }
+          change(next); setBeatMessage("Beat added. Preview its start and end before exporting.");
+        }}>Add subject beat</button>
+      </div>
+      {(project.subjectBeats ?? []).map(beat => <div className="row" key={beat.id} style={{ flexWrap: "wrap", gap: 12, marginTop: 10 }}><span>{beat.start.toFixed(2)}-{beat.end.toFixed(2)}s: {beat.mode}</span><button className="btn s g" onClick={() => change({ ...project, subjectBeats: (project.subjectBeats ?? []).filter(b => b.id !== beat.id) })}>Remove beat</button></div>)}
+      {subjectBeatError(project) && <p role="alert">{subjectBeatError(project)}</p>}
+      <p role="status">{beatMessage}</p>
     </section>
   );
-        }
+}
