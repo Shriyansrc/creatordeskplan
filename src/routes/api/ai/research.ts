@@ -1,3 +1,4 @@
+import { guardGeneration } from "@/lib/references/quota.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { researchInputSchema, researchSchema } from "@/lib/ai/contracts";
 import { generateValidated, providerIsConfigured } from "@/lib/ai/provider";
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/api/ai/research")({
         try { input = researchInputSchema.parse(await request.json()); }
         catch { return Response.json({ connected: true, error: "Invalid research request" }, { status: 400 }); }
         try {
+          const denied = await guardGeneration(request);
+          if (denied) return denied;
           const report = await gatherSources(input.topic, input.niche);
           if (report.sources.length < MIN_SOURCES) return Response.json({ connected: true, error: RESEARCH_NO_SOURCE }, { status: 502 });
           const grounded = { ...input, liveSources: report.sources.map((s) => ({ id: s.id, site: s.site, title: s.title, snippet: s.snippet })) };
