@@ -22,7 +22,7 @@ export const researchSchema = z.object({
     platforms: z.array(z.string().max(100)).max(6),
     activeTimes: z.string().max(300),
     painPoints: z
-      .array(z.object({ title: z.string().min(1).max(300), detail: z.string().max(800) }))
+      .array(z.object({ title: z.string().min(1).max(300), detail: z.string().max(800), sourceIds: z.array(z.number().int()).max(6).optional() }))
       .min(1)
       .max(12),
     searches: z
@@ -31,6 +31,7 @@ export const researchSchema = z.object({
           phrase: z.string().min(1).max(300),
           intent: z.string().max(200),
           platform: z.string().max(100),
+          sourceIds: z.array(z.number().int()).max(6).optional(),
         }),
       )
       .max(20),
@@ -41,6 +42,7 @@ export const researchSchema = z.object({
         keyword: z.string().min(1).max(300),
         trend: z.string().max(300),
         reason: z.string().max(600),
+        sourceIds: z.array(z.number().int()).max(6).optional(),
       }),
     )
     .max(30),
@@ -56,6 +58,8 @@ export const researchSchema = z.object({
       }),
     )
     .max(20),
+  sources: z.array(z.object({ id: z.number().int(), site: z.string().max(200), title: z.string().max(300), url: z.string().max(600), snippet: z.string().max(600) })).max(60).optional(),
+  checkedAt: z.string().max(60).optional(),
 });
 export type ResearchResult = z.infer<typeof researchSchema>;
 
