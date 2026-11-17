@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { SavedVideos } from "@/desk/saved-videos";
 import { useEffect, useState } from "react";
 import type { PlanResult } from "@/lib/ai/contracts";
 import { useDesk } from "@/desk/store";
@@ -61,7 +62,7 @@ function Home() {
         </div>
       </div>
       <div className="dk-label" style={{ marginTop: 34 }}>Your videos</div>
-      <div className="dk-empty">Videos you script, record, drop in or edit appear here.<br />Nothing is pre-made for you.</div>
+      <SavedVideos />
     </>
   );
           }
