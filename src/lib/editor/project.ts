@@ -10,7 +10,7 @@ export function createProject(): EditorProject {
     clips: [],
     ratio: "9:16",
     captionsEnabled: true,
-    captionStyle: { preset: "owner", size: 58, color: "#F4F1EA", position: 50 },
+    captionStyle: { preset: "impact", size: 58, color: "#F4F1EA", position: 50, font: "script", impactFont: "anton", impactColor: "#E8443A", outline: 0, shadow: 4, animation: "pop" },
     overlays: [],
   };
 }
