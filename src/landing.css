@@ -194,3 +194,7 @@
 }
 
 .lp2 .notes.glass{background:rgba(255,255,255,.9)}
+
+.lp2 .bigcard .plat{color:#1f2430;font-size:15px;font-weight:700;width:auto;height:auto;gap:10px;padding:10px 0;border-bottom:1px solid #eef0f4}
+.lp2 .bigcard .plat small{color:#52525b;font-size:12px;font-weight:600}
+.lp2 .frow h2.balance{text-wrap:balance}
