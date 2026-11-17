@@ -10,7 +10,6 @@ import type { SetShared, StudioShared } from "@/lib/creator-shared";
 import { selectedPlatforms } from "@/lib/creator-shared";
 import { detectSilence, type SilenceRange } from "@/lib/editor/audio";
 import { DIMENSIONS, drawFrame, exportProject, loadCaptionFont } from "@/lib/editor/export";
-import { parseLocalPrompt } from "@/lib/editor/local-prompt";
 import { applyOperations, clipDuration, clipFromAsset, clipStart, createProject, describeOperation, locateTime, projectDuration, wordTimelineTime } from "@/lib/editor/project";
 import { CAPTION_FONT_OPTIONS, captionDefaultFont } from "@/lib/editor/caption-font";
 import { CaptionPreview } from "@/lib/editor/caption-preview";
@@ -71,7 +70,6 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const [pending, setPending] = useState<PendingEdit | null>(null);
   const [prompt, setPrompt] = useState("");
   const [speechLang, setSpeechLang] = useState<"en" | "hi">("en");
-  const [promptMode, setPromptMode] = useState<"basic" | "ai">("ai");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [playhead, setPlayhead] = useState(0);
@@ -91,7 +89,6 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const frameRef = useRef(0);
   const dragRef = useRef<{ pointer: number; x: number; y: number; cropX: number; cropY: number } | null>(null);
 
-  useEffect(() => { if (connection.state === "not-connected") setPromptMode("basic"); }, [connection.state]);
 
   const view = pending?.preview ?? project;
   const location = locateTime(view, playhead);
@@ -293,14 +290,14 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
 
   const previewPrompt = async () => {
     if (!prompt.trim()) return;
-    setBusy(promptMode === "ai" ? "Getting AI edit operations…" : "Parsing locally…"); setError(""); setPlaying(false);
+    setBusy("Getting AI edit operations…"); setError(""); setPlaying(false);
     try {
       const compact = { ratio: project.ratio, clips: project.clips.map((clip) => ({ id: clip.id, sourceId: clip.sourceId, name: clip.name, trimIn: clip.trimIn, trimOut: clip.trimOut, speed: clip.speed, volume: clip.volume, muted: clip.muted })) };
       const input = editInputSchema.parse({ prompt, transcript: transcript.slice(0, 10000).map((word) => ({ clipId: project.clips.find((clip) => clip.originId === word.clipId)?.id ?? word.clipId, word: word.word, start: word.start, end: word.end })), timeline: compact });
-      const response = promptMode === "ai" ? editResponseSchema.parse(await callAI<unknown, unknown>("edit", input)) : parseLocalPrompt(prompt, project);
+      const response = editResponseSchema.parse(await callAI<unknown, unknown>("edit", input));
       const operations = await hydrateSilence(response.operations);
       const preview = applyOperations(project, operations);
-      setPending({ source: promptMode, prompt, summary: response.summary, operations, preview });
+      setPending({ source: "ai", prompt, summary: response.summary, operations, preview });
       setPlayhead(0);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Edit preview failed"); }
     finally { setBusy(""); }
@@ -472,11 +469,11 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
         <p className="editor-target">{selected ? `Editing: ${selected.name}` : "Add your footage to start"}</p>
         <div className="panel">
           {st.tool === "AI" && <div className="ai-panel">
-            <p className="note">Tell the editor what to change in your own words. It proposes a change list first - you apply or reject it. Nothing silently changes.</p>
+            <p className="note">Tell the editor what to change in plain words: cut the silences, brighten it, add captions, make it ready to post. The AI reads your timeline and transcript, proposes an exact change list and previews it on your video. You accept or reject it, and Undo restores every change. Nothing changes silently.</p>
             <textarea ref={promptRef} className="field ai-input" rows={4} aria-label="Tell the AI how to edit the video" placeholder="For example: cut the silences, make it brighter, add captions" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void previewPrompt(); } }} />
-            <div className="row" style={{ marginTop: 10, flexWrap: "wrap" }}><div className="nav"><button className={promptMode === "ai" ? "on" : ""} onClick={() => setPromptMode("ai")} disabled={connection.state !== "connected"}>AI</button><button className={promptMode === "basic" ? "on" : ""} onClick={() => setPromptMode("basic")}>Basic local mode</button></div><span className="tg n">{promptMode === "basic" ? "Basic, runs in your browser" : connection.state === "connected" ? "Connected" : "Not connected"}</span></div>
-            {promptMode === "ai" && connection.state !== "connected" && <p className="note">{NOT_CONNECTED_COPY}</p>}
-            <button className="btn" style={{ marginTop: 10 }} disabled={Boolean(busy) || !prompt.trim() || (promptMode === "ai" && connection.state !== "connected")} onClick={previewPrompt}>Propose edit</button>
+            <div className="row" style={{ marginTop: 10, flexWrap: "wrap" }}><span className="tg n">{connection.state === "connected" ? "AI connected" : connection.state === "checking" ? "Checking AI…" : "AI not connected"}</span></div>
+            {connection.state === "not-connected" && <p className="note">{NOT_CONNECTED_COPY}</p>}
+            <button className="btn" style={{ marginTop: 10 }} disabled={Boolean(busy) || !prompt.trim() || connection.state !== "connected"} onClick={previewPrompt}>Propose edit</button>
           </div>}
           {st.tool === "Media" && <div><label className="btn g s">Import clips<input type="file" accept="video/*" multiple hidden onChange={(event) => void importFiles(Array.from(event.target.files ?? []))} /></label><p className="note">{project.clips.length} clips on the timeline. Session files stay on this device.</p></div>}
           {st.tool === "Trim" && selected && <div className="stack"><div className="row"><button className="btn s g" onClick={() => activeClip && location && commitOperations([{ type: "split", clipId: activeClip.id, at: location.sourceTime }])}>Split at playhead</button><button className="btn s g" onClick={() => commitOperations([{ type: "delete", clipId: selected.id }])}>Delete clip</button></div><div className="row"><button className="btn s g" disabled={view.clips.indexOf(selected) <= 0} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) - 1 }])}>Move earlier</button><button className="btn s g" disabled={view.clips.indexOf(selected) >= view.clips.length - 1} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) + 1 }])}>Move later</button></div><label className="lab">Trim in, seconds<input key={`${selected.id}-in-${selected.trimIn}`} className="field" type="number" min={0} max={selected.trimOut - 0.05} step={0.1} defaultValue={selected.trimIn} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: Number(event.target.value), end: selected.trimOut }])} /></label><label className="lab">Trim out, seconds<input key={`${selected.id}-out-${selected.trimOut}`} className="field" type="number" min={selected.trimIn + 0.05} max={selected.sourceDuration} step={0.1} defaultValue={selected.trimOut} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: selected.trimIn, end: Number(event.target.value) }])} /></label><label className="lab">Speed: {selected.speed.toFixed(2)}x<input type="range" min={0.25} max={4} step={0.05} value={selected.speed} onChange={(event) => commitOperations([{ type: "speed", clipId: selected.id, value: Number(event.target.value) }])} /></label><button className="btn s g" onClick={previewSilence}>Preview silence removal</button></div>}
@@ -522,7 +519,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
         {st.tool === "Sound" && <StyleControls project={view} transcript={transcript} change={commit} />}
         {st.tool === "Style" && <><button className="btn s g" onClick={runTalkingHeadStyle} disabled={Boolean(busy) || exporting || !project.clips.length}>Apply my talking-head style</button>    {styleResult && <section className="style-result" aria-label="Talking-head style result"><h2>Changed</h2><ul>{styleResult.changed.map((item) => <li key={item}>{item}</li>)}</ul>{styleResult.couldNot.length > 0 && <><h2>Could not apply</h2><ul>{styleResult.couldNot.map((item) => <li key={item}>{item}</li>)}</ul></>}<h2>Available, not applied</h2><ul>{!project.motionScenes?.length && <li>Continuous transcript-led motion scenes</li>}{!project.wrappingCaptions?.enabled && <li>Optional manually positioned wrapping captions</li>}{(!project.subjectMode || project.subjectMode === "original") && <li>Experimental local subject sticker/silhouette after mask preparation</li>}{!project.music?.enabled && <li>Background music: local file or synthesised soft pad</li>}</ul><h2>Not available yet</h2><ul>{NOT_AVAILABLE.map((item) => <li key={item}>{item}</li>)}</ul></section>}
 </>}
-    {pending && <div className="panel pending-edit" style={{ marginTop: 12 }}><div className="row"><h2>Review the proposed edit</h2><span className="sp" /><span className={"tg " + (pending.source === "ai" ? "r" : "n")}>{pending.source === "ai" ? "Connected AI operations" : "Basic local operations"}</span></div><p>{pending.summary}</p><div className="stack" style={{ margin: "12px 0" }}>{pending.operations.map((operation, index) => <div className="card" key={`${operation.type}-${index}`}>{describeOperation(operation)}</div>)}</div><div className="row" style={{ flexWrap: "wrap" }}><button className="btn" onClick={() => commit(pending.preview)}>Accept edit</button><button className="btn g" onClick={() => setPending(null)}>Reject</button><button className="btn g" onClick={() => { setPrompt(pending.prompt); setPending(null); promptRef.current?.focus(); }}>Tweak prompt</button></div></div>}
+    {pending && <div className="panel pending-edit" style={{ marginTop: 12 }}><div className="row"><h2>Review the proposed edit</h2><span className="sp" /><span className={"tg " + (pending.source === "ai" ? "r" : "n")}>{pending.source === "ai" ? "Connected AI operations" : "Local operations"}</span></div><p>{pending.summary}</p><div className="stack" style={{ margin: "12px 0" }}>{pending.operations.map((operation, index) => <div className="card" key={`${operation.type}-${index}`}>{describeOperation(operation)}</div>)}</div><div className="row" style={{ flexWrap: "wrap" }}><button className="btn" onClick={() => commit(pending.preview)}>Accept edit</button><button className="btn g" onClick={() => setPending(null)}>Reject</button><button className="btn g" onClick={() => { setPrompt(pending.prompt); setPending(null); promptRef.current?.focus(); }}>Tweak prompt</button></div></div>}
       </aside>
     </div>
     <footer className="editor-export">
