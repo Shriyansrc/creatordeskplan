@@ -1,0 +1,28 @@
+import type { ClipAsset, EditorClip, EditorProject } from "./types";
+
+/**
+ * Clips recorded or imported in this browser session are handed to the editor once, in the order they were added.
+ * A project saved from an earlier visit may already hold clips, so the handoff cannot depend on an empty timeline.
+ * Existing clips are never removed or reordered; new session clips go after them.
+ */
+const handedOff = new Set<string>();
+
+export function handoffSnapshot(): ReadonlySet<string> {
+  return new Set(handedOff);
+}
+
+export function markHandedOff(assets: ClipAsset[]) {
+  for (const asset of assets) handedOff.add(asset.sourceId);
+}
+
+export function resetHandoffForTests() {
+  handedOff.clear();
+}
+
+/** Pure. Returns the same project object when there is nothing new to add. */
+export function mergeSessionClips(project: EditorProject, assets: ClipAsset[], handed: ReadonlySet<string>, make: (asset: ClipAsset) => EditorClip): EditorProject {
+  const referenced = new Set(project.clips.map((clip) => clip.sourceId));
+  const fresh = assets.filter((asset) => !handed.has(asset.sourceId) && !referenced.has(asset.sourceId));
+  if (!fresh.length) return project;
+  return { ...project, clips: [...project.clips, ...fresh.map(make)] };
+}
