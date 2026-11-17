@@ -1,3 +1,4 @@
+import { drawKaraoke } from "./karaoke";
 import { applyFrameColor } from "./color";
 import { drawMotion, motionError } from "./motion-scenes";
 import { renderOffline } from "./offline-export";
@@ -92,7 +93,8 @@ export function drawFrame(
     context.fillText(overlay.text, canvas.width / 2, canvas.height * 0.2, canvas.width * 0.9);
   }
   if (project.captionsEnabled && project.wrappingCaptions?.enabled) drawWrapping(context, canvas, project, transcript, timelineTime, { ...DEFAULT_WRAPPING, ...project.wrappingCaptions });
-  if (project.captionsEnabled && !project.wrappingCaptions?.enabled) {
+  if (project.captionsEnabled && project.captionStyle.karaoke && !project.wrappingCaptions?.enabled) drawKaraoke(context, canvas, project, transcript, timelineTime);
+  if (project.captionsEnabled && !project.captionStyle.karaoke && !project.wrappingCaptions?.enabled) {
     const ownerStyle = project.captionStyle.preset === "owner";
     const cue = ownerStyle ? captionAt(captionCues(project, transcript), timelineTime) : undefined;
     const word = ownerStyle ? cue?.word : activeWord(project, transcript, clip, sourceTime);
