@@ -1,3 +1,4 @@
+import { withWebmDuration } from "./webm-duration";
 import { activeWord, clipDuration, clipStart, projectDuration, wordTimelineTime } from "./project";
 import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./types";
 
@@ -209,7 +210,7 @@ async function renderWebM(
     }
     recorder.stop();
     await stopped;
-    return new Blob(chunks, { type: "video/webm" });
+    return await withWebmDuration(new Blob(chunks, { type: "video/webm" }), total * 1000);
   } finally {
     video.pause();
     if (recorder.state !== "inactive") recorder.stop();
