@@ -44,7 +44,8 @@ async function reddit(q: string): Promise<Raw[]> {
   }));
 }
 
-async function hackerNews(q: string): Promise<Raw[]> {
+// kept for reference, not used: Hacker News is tech-only and added noise for most niches.
+export async function hackerNews(q: string): Promise<Raw[]> {
   const j = rec(await getJson(`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=6`));
   return arr(j.hits).map(rec).filter((h) => h.title && h.objectID).slice(0, 5).map((h) => ({
     site: "Hacker News",
@@ -73,7 +74,10 @@ export async function gatherSources(topic: string, niche: string): Promise<Sourc
     jobs.push({ site: `YouTube suggestions: ${q}`, run: () => suggest(q, true) });
     jobs.push({ site: `Google suggestions: ${q}`, run: () => suggest(q, false) });
     jobs.push({ site: `Reddit: ${q}`, run: () => reddit(q) });
-    jobs.push({ site: `Hacker News: ${q}`, run: () => hackerNews(q) });
+    for (const pre of ["how to ", "why ", "mistakes ", "best "]) {
+      const qq = pre === "mistakes " ? `${q} mistakes` : `${pre}${q}`;
+      jobs.push({ site: `YouTube questions: ${qq}`, run: () => suggest(qq, true) });
+    }
     jobs.push({ site: `Wikipedia: ${q}`, run: () => wikipedia(q) });
   }
   const settled = await Promise.allSettled(jobs.map((j) => j.run()));
