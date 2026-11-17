@@ -10,6 +10,7 @@ export const researchInputSchema = z.object({
   platforms: z.array(platformSchema).max(4),
   audienceNotes: z.string().max(4000).optional(),
   painPoints: z.array(z.string().max(500)).max(20).optional(),
+  contentTypes: z.array(z.string().max(100)).max(10).optional(),
 });
 export type ResearchInput = z.infer<typeof researchInputSchema>;
 
@@ -70,6 +71,7 @@ export const planInputSchema = z.object({
   platforms: z.array(platformSchema).min(1).max(4),
   research: researchSchema,
   language: z.string().max(40).optional(),
+  contentTypes: z.array(z.string().max(100)).max(10).optional(),
 });
 export type PlanInput = z.infer<typeof planInputSchema>;
 
@@ -108,6 +110,7 @@ export const scriptInputSchema = z.object({
   language: z.string().max(40).optional(),
   searchPhrases: z.array(z.string().max(200)).max(25).optional(),
   audience: z.string().max(500).optional(),
+  contentTypes: z.array(z.string().max(100)).max(10).optional(),
 });
 export type ScriptInput = z.infer<typeof scriptInputSchema>;
 
