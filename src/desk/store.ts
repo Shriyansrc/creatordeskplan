@@ -14,6 +14,7 @@ export type Profile = {
   hours: number;
   tools: string[];
   cameras: string[];
+  contentTypes: string[];
   language: string;
   setupDone: boolean;
 };
@@ -42,6 +43,7 @@ export const EMPTY_PROFILE: Profile = {
   hours: 0,
   tools: [],
   cameras: [],
+  contentTypes: [],
   language: "",
   setupDone: false,
 };
@@ -61,8 +63,9 @@ function load() {
       const parsed = JSON.parse(raw) as Partial<DeskState> & { niche?: { title: string; fit: string } | null };
       const legacyProfile = (parsed.profile ?? {}) as Partial<Profile> & { camera?: string };
       const cameras = Array.isArray(legacyProfile.cameras) ? legacyProfile.cameras : legacyProfile.camera ? [legacyProfile.camera] : [];
+      const contentTypes = Array.isArray(legacyProfile.contentTypes) ? legacyProfile.contentTypes : [];
       const pickedNiches = Array.isArray(parsed.pickedNiches) ? parsed.pickedNiches : parsed.niche ? [parsed.niche] : [];
-      state = { ...EMPTY, ...parsed, pickedNiches, profile: { ...EMPTY_PROFILE, ...legacyProfile, cameras }, scripts: parsed.scripts ?? {}, results: parsed.results ?? [] };
+      state = { ...EMPTY, ...parsed, pickedNiches, profile: { ...EMPTY_PROFILE, ...legacyProfile, cameras, contentTypes }, scripts: parsed.scripts ?? {}, results: parsed.results ?? [] };
     }
   } catch {
     state = EMPTY;
@@ -112,6 +115,7 @@ export function useDesk(): DeskState {
 export const GOALS = ["Grow my business", "Build my personal brand"] as const;
 export const TOOLS = ["Phone camera", "Camera", "Microphone", "Screen recording", "None yet"] as const;
 export const CAMERA = ["On camera", "Voice only", "Screen + voice"] as const;
+export const CONTENT_TYPES = ["Talking-head tips", "Tutorials / how-tos", "Product demos", "Behind the scenes", "Vlog / day in the life", "Reviews"] as const;
 export const LANGUAGES = ["Hinglish", "Hindi", "English"] as const;
 // Languages Gemini TTS lists as supported (it detects the language from the text). Scripts are written in the same language.
 export const OTHER_LANGUAGES = ["Arabic", "Bengali", "Bulgarian", "Burmese", "Chinese (Mandarin)", "Croatian", "Czech", "Danish", "Dutch", "Finnish", "French", "German", "Greek", "Gujarati", "Hebrew", "Hungarian", "Indonesian", "Italian", "Japanese", "Kannada", "Korean", "Malay", "Malayalam", "Marathi", "Nepali", "Norwegian", "Odia", "Persian", "Polish", "Portuguese", "Punjabi", "Romanian", "Russian", "Serbian", "Sinhala", "Slovak", "Spanish", "Swahili", "Swedish", "Tamil", "Telugu", "Thai", "Turkish", "Ukrainian", "Urdu", "Vietnamese"] as const;
