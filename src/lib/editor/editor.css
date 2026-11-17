@@ -214,3 +214,11 @@
  .workspace-editor .note { color:#61708a; }
  .workspace-editor .inspector-heading { border-bottom:2px solid #c25a9d; }
 }
+/* Keep the hosted preview badge clear of export and download actions. */
+@media(min-width:821px) {
+ .workspace-editor .editor-export { padding-right:220px; }
+ .workspace-editor .editor-export .row { justify-content:flex-start; gap:12px; }
+ .workspace-editor .editor-export .row>.sp { display:none; }
+ .workspace-editor .reference-preview { margin-top:10px; }
+ .workspace-editor .reference-preview summary { min-height:24px; font-size:12px; }
+                                          }
