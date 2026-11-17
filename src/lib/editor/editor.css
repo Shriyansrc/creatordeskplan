@@ -5,6 +5,18 @@
   font-style: italic;
   font-display: block;
 }
+@font-face {
+  font-family: "CDImpact";
+  src: url("./anton-regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "CDScript";
+  src: url("./dancing-script-bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: block;
+}
 .talking-head-editor {
   --caption-cream: #F4F1EA;
   --caption-shadow: rgba(0, 0, 0, 0.5);
@@ -185,35 +197,75 @@
  .workspace-editor .timeline-words button { position:absolute; top:0; height:27px; padding:3px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
  .workspace-editor .inspector-heading + .editor-target { margin-top:0; }
 }
-/* Creator Desk blue/pink editor chrome. Footage keeps its own colours. */
+/* Creator Desk editor chrome: neutral panels, colour only where it means something. Footage keeps its own colours. */
 @media(min-width:821px) {
- .workspace-editor { --panel:#fafbfe; --card:#fafbfe; --line:#dce2ec; --blueSoft:#e9f1ff; color:#202839; }
- .workspace-editor .editor-workspace { background:#f6f8fc; border-color:#dce2ec; }
- .workspace-editor .editor-toolbar { background:#eef2f9; border-color:#d8e0ec; }
- .workspace-editor .editor-inspector,.workspace-editor .inspector-heading { background:#fafbfe; border-color:#dce2ec; }
- .workspace-editor .estage { background:#e8edf5; }
- .workspace-editor .editor-toolbar button { color:#46556e; }
- .workspace-editor .tool-group>span { color:#6a7890; font-weight:600; }
+ .workspace-editor { --panel:#ffffff; --card:#ffffff; --line:#e4e7ec; --blueSoft:#eef4ff; color:#101828; }
+ .workspace-editor .editor-workspace { background:#f2f4f7; border-color:#e4e7ec; }
+ .workspace-editor .editor-toolbar { background:#fbfcfd; border-color:#e4e7ec; }
+ .workspace-editor .editor-inspector,.workspace-editor .inspector-heading { background:#ffffff; border-color:#e4e7ec; }
+ .workspace-editor .estage { background:#e9ecf1; }
+ .workspace-editor .editor-toolbar button { color:#475467; }
+ .workspace-editor .tool-group>span { color:#667085; font-weight:600; }
  .workspace-editor .editor-toolbar button.on { background:#0058cc; color:#fff; }
  .workspace-editor .btn:not(.g) { background:#0058cc; color:#fff; border-color:#0058cc; }
- .workspace-editor .btn.g,.workspace-editor .chip { background:#f0f3fa; color:#435775; border-color:#d8e0ed; }
- .workspace-editor .chip.on { background:#e8f0ff; color:#0058cc; border-color:#aac7ee; }
- .workspace-editor .editor-timeline { background:#f8faff; border-color:#dce2ec; }
- .workspace-editor .editor-strip .timeline-clip { background:#edf2fb; border-color:#c7d7ef; color:#36577f; }
- .workspace-editor .editor-strip .timeline-clip.selected { background:#dceaff; border-color:#0058cc; color:#004eaf; }
- .workspace-editor .timeline-ruler { border-color:#c5d1e4; background-image:repeating-linear-gradient(to right,transparent 0,transparent 38px,#cdd8e8 38px,#cdd8e8 39px); }
- .workspace-editor .timeline-ruler>span { background:#0058cc; }
+ .workspace-editor .btn.g,.workspace-editor .chip { background:#f2f4f7; color:#344054; border-color:#e4e7ec; }
+ .workspace-editor .chip.on { background:#eef4ff; color:#0058cc; border-color:#b2ccff; }
+ .workspace-editor .editor-timeline { background:#ffffff; border-color:#e4e7ec; }
+ .workspace-editor .editor-strip .timeline-clip { background:#eef4ff; border-color:#c7d9f7; color:#175cd3; }
+ .workspace-editor .editor-strip .timeline-clip.selected { background:#dbe9ff; border-color:#0058cc; color:#0058cc; }
+ .workspace-editor .timeline-ruler { border-color:#d0d5dd; background-image:repeating-linear-gradient(to right,transparent 0,transparent 38px,#d0d5dd 38px,#d0d5dd 39px); }
+ .workspace-editor .timeline-ruler>span { background:#c25a9d; }
  .workspace-editor .timeline-words button { background:#faeaf5; color:#8e3c71; border:1px solid #e5bfd7; }
- .workspace-editor .transcript-words button.selected { background:#e8f0ff; border-color:#0058cc; color:#0058cc; }
+ .workspace-editor .transcript-words button.selected { background:#eef4ff; border-color:#0058cc; color:#0058cc; }
  .workspace-editor input[type=range],.workspace-editor input[type=checkbox] { accent-color:#0058cc; }
  .workspace-editor .editor-play { background:#fff; border-color:#b2c9e9; color:#0058cc; }
- .workspace-editor .eratio,.workspace-editor .eratio .chip { color:#61728c; }
- .workspace-editor .eratio .chip.on { background:#e3ecfc; border-color:#b6cae8; color:#0058cc; }
+ .workspace-editor .eratio,.workspace-editor .eratio .chip { color:#667085; }
+ .workspace-editor .eratio .chip.on { background:#eef4ff; border-color:#b2ccff; color:#0058cc; }
  .workspace-editor .pending-track { background:#faeaf5; color:#943c76; border:1px solid #e4bad4; }
- .workspace-editor .field { border-color:#d5dfed; background:#fff; color:#29374d; }
- .workspace-editor .note { color:#61708a; }
+ .workspace-editor .field { border-color:#d0d5dd; background:#fff; color:#101828; }
+ .workspace-editor .note { color:#667085; }
  .workspace-editor .inspector-heading { border-bottom:2px solid #c25a9d; }
+ .workspace-editor .editor-target { color:#667085; }
+ .workspace-editor .editor-inspector .lab { color:#667085; }
+ .workspace-editor .editor-inspector .btn { background:#f2f4f7; color:#344054; border:1px solid #e4e7ec; }
+ .workspace-editor .editor-inspector .btn:not(.g) { background:#0058cc; color:#fff; }
+ .workspace-editor .editor-inspector .chip { background:#f2f4f7; color:#344054; }
+ .workspace-editor .editor-inspector .chip.on { border-color:#b2ccff; background:#eef4ff; color:#0058cc; }
 }
+
+/* Timeline transport and playhead. */
+.timeline-transport { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.timeline-transport .transport-time { font-size:12px; color:#667085; font-variant-numeric:tabular-nums; }
+.timeline-transport .sp { flex:1; }
+.transport-btn { min-height:30px; padding:5px 12px; font-size:12px; border-radius:6px; border:1px solid #e4e7ec; background:#f2f4f7; color:#344054; cursor:pointer; }
+.transport-btn:disabled { opacity:.5; cursor:default; }
+.transport-btn.cut { background:#0058cc; border-color:#0058cc; color:#fff; font-weight:600; }
+.timeline-body { position:relative; }
+.timeline-ruler { cursor:col-resize; touch-action:none; }
+.playhead-line { position:absolute; top:0; bottom:0; width:2px; margin-left:-1px; background:#c25a9d; pointer-events:none; z-index:2; }
+.playhead-line i { position:absolute; top:-2px; left:-4px; width:10px; height:10px; border-radius:50%; background:#c25a9d; }
+
+/* AI prompt panel. */
+.ai-panel .ai-input { width:100%; resize:vertical; min-height:88px; font-size:13px; line-height:1.45; }
+
+/* Caption style preview and pickers. */
+.caption-preview { margin-top:10px; }
+.caption-preview canvas { width:100%; height:auto; border-radius:8px; display:block; background:#111722; }
+.caption-preview span { display:block; margin-top:4px; font-size:11px; color:#98a2b3; }
+.caption-style-list { display:flex; flex-direction:column; gap:6px; margin-bottom:4px; }
+.caption-style-option { display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; padding:8px 10px; border:1px solid #e4e7ec; border-radius:8px; background:#fff; cursor:pointer; font-size:13px; color:#101828; }
+.caption-style-option span { font-size:11px; color:#98a2b3; }
+.caption-style-option.on { border-color:#0058cc; background:#eef4ff; }
+.caption-style-option.on span { color:#0058cc; }
+.font-list { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px; }
+.font-option { display:flex; align-items:center; gap:7px; padding:6px 10px; border:1px solid #e4e7ec; border-radius:8px; background:#fff; cursor:pointer; font-size:12px; color:#344054; }
+.font-option .font-sample { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#111722; color:#f4f1ea; flex:none; }
+.font-option.on { border-color:#0058cc; background:#eef4ff; color:#0058cc; }
+
+/* Neutral desk shell while the editor workspace is open. */
+.desk:has(.workspace-editor) { --bg:#f2f4f7; --mute:#667085; --line:#e4e7ec; }
+.desk:has(.workspace-editor) .dk-nav { background:#e9ecf1; }
+.desk:has(.workspace-editor) .dk-nav a.on { background:#ffffff; color:#0058cc; }
 /* Keep the hosted preview badge clear of export and download actions. */
 @media(min-width:821px) {
  .workspace-editor .editor-export { padding-right:220px; }
@@ -221,4 +273,4 @@
  .workspace-editor .editor-export .row>.sp { display:none; }
  .workspace-editor .reference-preview { margin-top:10px; }
  .workspace-editor .reference-preview summary { min-height:24px; font-size:12px; }
-                                          }
+  }
