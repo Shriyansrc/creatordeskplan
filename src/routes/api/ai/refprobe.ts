@@ -1,22 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { searchWeb, verify, type EngineLog, type WebPlatform } from "@/lib/references/web";
 
-// Temporary read-only diagnostic.
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+// Temporary read-only diagnostic of the keyless reference lookups.
 export const Route = createFileRoute("/api/ai/refprobe")({
   server: {
     handlers: {
       GET: async ({ request }) => {
         const q = new URL(request.url).searchParams.get("q") ?? "how to study for exams";
-        const g = async (u: string) => (await fetch(u, { headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" } })).text();
-        const web = await g(`https://www.bing.com/search?setlang=en&count=30&q=${encodeURIComponent("youtube " + q)}`);
-        const vid = await g(`https://www.bing.com/videos/search?setlang=en&q=${encodeURIComponent(q + " youtube")}`);
-        const i = vid.indexOf("murl");
-        const k = web.indexOf("b_algo");
-        return Response.json({
-          webLen: web.length, algo: (web.match(/b_algo/g) ?? []).length, webAt: web.slice(k, k + 900),
-          vidLen: vid.length, murlCount: (vid.match(/murl/g) ?? []).length, vidAt: vid.slice(Math.max(0, i - 100), i + 700),
-          ytInWeb: (web.match(/youtube\.com/g) ?? []).length,
-        });
+        const log: EngineLog[] = [];
+        const result: Record<string, unknown> = {};
+        for (const p of ["yt", "ig", "x", "li"] as WebPlatform[]) {
+          const hits = await searchWeb(p, q, log);
+          const checked = await Promise.all(hits.slice(0, 4).map((h) => verify(h)));
+          result[p] = { found: hits.length, sample: hits.slice(0, 4).map((h) => ({ url: h.url, t: h.title.slice(0, 50), e: h.engine })), verified: checked.map((c) => c && { t: c.title.slice(0, 50), a: c.author, th: c.thumbnail ? c.thumbnail.slice(0, 55) : null, v: c.views, l: c.likes, ok: c.verified }) };
+        }
+        return Response.json({ log, result });
       },
     },
   },
