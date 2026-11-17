@@ -1,3 +1,4 @@
+import { needsSubjectMasks, subjectBeatError, subjectModeAt } from "./subject-beats";
 import { drawSubject, subjectMasksReady } from "./subject-mask";
 import { drawWrapping, DEFAULT_WRAPPING } from "./wrapping";
 import { withWebmDuration } from "./webm-duration";
@@ -91,8 +92,9 @@ export function drawFrame(
     context.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  if(project.subjectMode && project.subjectMode !== 'original' && video.videoWidth > 0) {
-    if(!drawSubject(context,canvas,clip.sourceId,sourceTime,x,y,width,height,project.subjectMode)){
+  const subjectMode = subjectModeAt(project, timelineTime);
+  if(subjectMode !== 'original' && video.videoWidth > 0) {
+    if(!drawSubject(context,canvas,clip.sourceId,sourceTime,x,y,width,height,subjectMode)){
       context.fillStyle='#111722';context.fillRect(0,0,canvas.width,canvas.height);context.font='600 28px sans-serif';context.textAlign='center';context.fillStyle='#ffffff';context.fillText('Prepare subject masks to preview this look',canvas.width/2,canvas.height/2,canvas.width*.9);context.restore();return;
     }
   }
@@ -261,9 +263,11 @@ export async function exportProject(
   format: "webm" | "mp4",
   onProgress: (value: number, label: string) => void,
 ) {
-  if(project.subjectMode && project.subjectMode !== 'original' && !subjectMasksReady(project))throw new Error('Prepare subject masks for the full edit before exporting, or choose Original footage.');
+  const beatError = subjectBeatError(project);
+  if (beatError) throw new Error(beatError);
+  if(needsSubjectMasks(project) && !subjectMasksReady(project))throw new Error('Prepare subject masks for the full edit before exporting, or choose Original footage.');
   const webm = await renderWebM(project, assets, transcript, (value, label) => onProgress(value * (format === "mp4" ? 0.8 : 1), label));
   const blob = format === "mp4" ? await convertToMp4(webm, onProgress) : webm;
   onProgress(1, "Export ready");
   return blob;
-}
+                      }
