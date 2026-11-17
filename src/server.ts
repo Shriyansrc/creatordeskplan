@@ -1,5 +1,7 @@
 import "./lib/error-capture";
 
+// Keep the preview server entry rebuilt with the shared authenticated quota handlers.
+
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 
