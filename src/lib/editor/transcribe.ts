@@ -23,7 +23,7 @@ export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgr
     const word = chunk.text.trim();
     const start = chunk.timestamp?.[0];
     const end = chunk.timestamp?.[1];
-    if (!word || typeof start !== "number") return [];
-    return [{ id: makeLocalId("word"), clipId: clip.originId, word, start, end: typeof end === "number" ? Math.max(start + 0.08, end) : start + 0.35 }];
+    if (!word || typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) return [];
+    return [{ id: makeLocalId("word"), clipId: clip.originId, word, start, end }];
   });
-}
+        }
