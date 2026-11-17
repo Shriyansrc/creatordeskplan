@@ -8,7 +8,7 @@ export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgr
   onProgress("Loading the local Whisper model. The first run downloads model files.");
   const { pipeline, env } = await import("@huggingface/transformers");
   env.allowLocalModels = false;
-  const transcriber = await pipeline("automatic-speech-recognition", "Xenova/whisper-tiny", {
+  const transcriber = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", {
     device: "wasm",
     dtype: "q8",
     progress_callback: (progress: { status?: string; progress?: number }) => {
