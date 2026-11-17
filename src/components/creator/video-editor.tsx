@@ -357,7 +357,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     {busy && <p className="editor-message" role="status">{busy}</p>}
     {error && <div className="notice editor-message" role="alert">{error}</div>}
     <div className="ed editor-workspace">
-      <nav className="tools editor-toolbar" aria-label="Editing tools">{TOOLS.map((tool) => <button key={tool} className={st.tool === tool ? "on" : ""} onClick={() => set({ tool })}>{tool}</button>)}</nav>
+      <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{TOOLS.map((tool) => <button key={tool} className={st.tool === tool ? "on" : ""} onClick={() => set({ tool })}>{tool}</button>)}</nav>
       <section className="editor-viewer" aria-label="Video and timeline">
         <div className="estage">
           <div className="phone editor-phone" style={{ aspectRatio: view.ratio.replace(":", "/") }} onPointerDown={(event) => {
@@ -373,9 +373,10 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
             setProject((current) => applyOperations(current, [{ type: "crop", clipId: selected.id, ratio: current.ratio, x, y }]));
           }} onPointerUp={() => { dragRef.current = null; }}>
             {activeClip && activeAsset ? <><video className="editor-source" key={activeClip.id} ref={videoRef} src={activeAsset.url} playsInline preload="auto" onClick={togglePlayback} /><canvas className="editor-render" ref={canvasRef} width={DIMENSIONS[view.ratio][0]} height={DIMENSIONS[view.ratio][1]} aria-label="Edited video preview" /></> : <div className="editor-empty"><b>No video yet</b><p>Choose a video to edit.</p></div>}
+            {activeClip && activeAsset && <button className="editor-play" aria-label={playing ? "Pause preview" : "Play preview with audio"} onPointerDown={event => event.stopPropagation()} onClick={togglePlayback} disabled={Boolean(busy) || exporting}>{playing ? "Pause" : "Play"}</button>}
             {st.tool === "Crop" && selected && <span className="crop-handle" aria-label="Drag to reframe" />}
           </div>
-          <div className="eratio"><button className="btn s g" onClick={togglePlayback} disabled={!activeClip}>{playing ? "Pause" : "Play"}</button>{RATIOS.map((ratio) => <button key={ratio} className={"chip" + (view.ratio === ratio ? " on" : "")} onClick={() => commitOperations([{ type: "crop", ratio }])}>{ratio}</button>)}<span className="sp" /><span style={{ fontSize: 12 }}>{formatTime(playhead)} / {formatTime(totalDuration)}</span></div>
+          <div className="eratio">{RATIOS.map((ratio) => <button key={ratio} className={"chip" + (view.ratio === ratio ? " on" : "")} onClick={() => commitOperations([{ type: "crop", ratio }])}>{ratio}</button>)}<span className="sp" /><span style={{ fontSize: 12 }}>{formatTime(playhead)} / {formatTime(totalDuration)}</span></div>
         </div>
         <div className="tl editor-timeline">
           <div className="timeline-ruler" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); seek(((event.clientX - rect.left) / rect.width) * totalDuration); }}><span style={{ left: `${totalDuration ? playhead / totalDuration * 100 : 0}%` }} /></div>
@@ -419,4 +420,4 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     <div className="panel" style={{ marginTop: 12 }}><div className="row" style={{ flexWrap: "wrap" }}><div><div className="lab">Real on-device export</div><select className="field" aria-label="Export format" value={exportFormat} onChange={(event) => { if (exportUrl) URL.revokeObjectURL(exportUrl); setExportUrl(""); setExportName(""); setExportLabel(""); setExportProgress(0); setExportFormat(event.target.value as "webm" | "mp4"); }}><option value="webm">WebM</option><option value="mp4">MP4 (local FFmpeg conversion)</option></select></div><span className="sp" /><button className="btn" disabled={exporting || !project.clips.length} onClick={doExport}>Export video</button>{exportUrl && <a className="btn g" href={exportUrl} download={exportName}>Download {exportName.split(".").pop()?.toUpperCase()}</a>}{exportUrl && <button className="btn g" onClick={() => go("publish")}>Continue to publish</button>}</div>{exportLabel && <><div className="bar" style={{ marginTop: 12 }}><i style={{ width: `${Math.round(exportProgress * 100)}%` }} /></div><p className="note">{exportLabel} · {Math.round(exportProgress * 100)}%</p></>}<p className="note">Export renders every frame at 30 fps, then packs audio on this device. It may take longer than the video. Keep this tab open. Both formats load the local FFmpeg core on first use. Your original is never modified.</p></div>
     </footer>
   </div>;
-      }
+    }
