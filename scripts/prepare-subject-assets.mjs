@@ -1,0 +1,17 @@
+import {createRequire} from 'node:module';
+import {readFileSync,writeFileSync,copyFileSync,mkdirSync} from 'node:fs';
+import {dirname,join,resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+const require=createRequire(import.meta.url);
+const root=resolve(dirname(new URL(import.meta.url).pathname),'..');
+const installed=dirname(require.resolve('@mediapipe/tasks-vision'));
+const version=JSON.parse(readFileSync(join(installed,'package.json'),'utf8')).version;
+if(version!=='0.10.32')throw Error(`Expected MediaPipe 0.10.32, got ${version}`);
+const vendor=join(root,'vendor/creator-vision'),out=join(root,'public/creator-vision');mkdirSync(out,{recursive:true});
+for(const suffix of ['internal','nosimd_internal'])for(const ext of ['js','wasm'])copyFileSync(join(installed,`wasm/vision_wasm_${suffix}.${ext}`),join(out,`vision_wasm_${suffix}.${ext}`));
+for(const file of ['vision.js','NOTICE.txt','LICENSE.txt'])copyFileSync(join(vendor,file),join(out,file));
+const model=Buffer.from([0,1].map(i=>readFileSync(join(vendor,`selfie.${i}.b64`),'utf8')).join(''),'base64');
+const expected=readFileSync(join(vendor,'selfie.sha256'),'utf8').trim();
+if(createHash('sha256').update(model).digest('hex')!==expected)throw Error('Person-mask model checksum mismatch');
+writeFileSync(join(out,'selfie.tflite'),model);
+console.log('Prepared fixed local person-mask assets (no network fetch).');
