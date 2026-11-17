@@ -71,6 +71,8 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const [prompt, setPrompt] = useState("");
   const [speechLang, setSpeechLang] = useState<"en" | "hi" | "hinglish">("hinglish");
   const [busy, setBusy] = useState("");
+  const cancelTranscription = useRef(false);
+  const transcriptionRun = useRef(0);
   const [error, setError] = useState("");
   const [playhead, setPlayhead] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -348,7 +350,8 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   };
 
   const runTranscription = async (): Promise<TranscriptWord[]> => {
-    setError("");
+    setError(""); cancelTranscription.current = false;
+    const runId = ++transcriptionRun.current;
     const allWords: TranscriptWord[] = [];
     const knownOrigins = new Set(transcript.map((word) => word.clipId));
     const missing: string[] = [];
@@ -357,7 +360,8 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
         if (knownOrigins.has(clip.originId)) continue;
         const asset = assets.find((item) => item.sourceId === clip.sourceId);
         if (!asset) { missing.push(clip.name); continue; }
-        const words = await transcribeClip(clip, asset, setBusy, speechLang);
+        const words = await transcribeClip(clip, asset, (message) => { if (runId === transcriptionRun.current) setBusy(message); }, speechLang, () => cancelTranscription.current || runId !== transcriptionRun.current);
+        if (runId !== transcriptionRun.current) return allWords;
         allWords.push(...words);
         knownOrigins.add(clip.originId);
         setTranscript([...transcript.filter((word) => word.clipId !== clip.originId), ...allWords]);
@@ -366,7 +370,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       setBusy("");
       if (missing.length) setError(`${missing.join(", ")} needs to be chosen again before it can be transcribed. The other clips were transcribed.`);
       return allWords;
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Transcription failed"); setBusy(""); return []; }
+    } catch (cause) { if (runId === transcriptionRun.current) { setError(cause instanceof Error ? cause.message : "Transcription failed"); setBusy(""); } return []; }
   };
 
   const previewSilence = async () => {
@@ -558,7 +562,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       <input type="file" accept="video/*" multiple hidden onChange={(event) => { void takeFiles(Array.from(event.target.files ?? [])); event.target.value = ""; }} />
     </label>}
         {st.tool === "Reference" && <ReferenceMatch project={project} assets={assets} onPropose={(operations,summary) => { setPlaying(false); setPending({source:"basic",prompt:"Basic reference colour match",summary,operations,preview:applyOperations(project,operations)}); setPlayhead(0); }} />}
-        {st.tool === "Transcript" && <TranscriptPanel project={view} words={transcript} change={setTranscript} seek={seek} transcribe={runTranscription} busy={Boolean(busy)} lang={speechLang} setLang={(lang) => setSpeechLang(lang === "hi" ? "hi" : lang === "en" ? "en" : "hinglish")} />}
+        {st.tool === "Transcript" && <TranscriptPanel project={view} words={transcript} change={setTranscript} seek={seek} transcribe={runTranscription} busy={Boolean(busy)} status={busy} cancel={() => { cancelTranscription.current = true; setBusy("Cancelling after the current part finishes…"); }} lang={speechLang} setLang={(lang) => setSpeechLang(lang === "hi" ? "hi" : lang === "en" ? "en" : "hinglish")} />}
         {st.tool === "Motion" && <MotionControls project={view} transcript={transcript} change={commit} />}
         {st.tool === "Subject" && <SubjectControls project={view} assets={assets} change={commit} />}
         {st.tool === "Sound" && <StyleControls project={view} transcript={transcript} change={commit} />}
