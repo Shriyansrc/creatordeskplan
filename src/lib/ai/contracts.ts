@@ -94,6 +94,7 @@ export type PlanResult = z.infer<typeof planSchema>;
 export type PlanTopic = z.infer<typeof planTopicSchema>;
 
 export const scriptInputSchema = z.object({
+  depth: z.enum(["auto", "brief", "deep"]).optional(),
   format: z.enum(["video", "image", "text"]).optional(),
   topic: z.string().trim().min(2).max(300),
   niche: z.string().trim().min(2).max(300),
@@ -116,7 +117,7 @@ const sectionOptionSchema = z.object({
 });
 export const scriptSchema = z.object({
   hook: z.string().min(1).max(10000),
-  problem: z.string().min(1).max(10000),
+  problem: z.string().max(10000),
   solution: z.string().min(1).max(10000),
   cta: z.string().min(1).max(10000),
   hashtags: z
@@ -286,7 +287,7 @@ export const captionsInputSchema = z.object({
     hook: z.string().max(10000),
     problem: z.string().max(10000),
     solution: z.string().max(10000),
-    cta: z.string().max(10000),
+    cta: z.string().min(1).max(10000),
     hashtags: z.array(z.string().max(100)).max(15).optional(),
   }),
 });
