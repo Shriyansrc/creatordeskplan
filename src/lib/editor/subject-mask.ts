@@ -159,6 +159,27 @@ export async function prepareSubjectMasks(
   }
 }
 const layers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+// Build the white border on the small model mask, never by stamping a full
+// 720x1280 video layer sixteen times per rendered frame.
+const outlines = new WeakMap<HTMLCanvasElement, { key: string; canvas: HTMLCanvasElement }>();
+function subjectOutline(mask: HTMLCanvasElement, radiusX: number, radiusY: number) {
+  const key = `${radiusX.toFixed(2)}:${radiusY.toFixed(2)}`;
+  const cached = outlines.get(mask);
+  if (cached?.key === key) return cached.canvas;
+  const outline = document.createElement("canvas");
+  outline.width = mask.width;
+  outline.height = mask.height;
+  const context = outline.getContext("2d");
+  if (!context) return null;
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+    context.drawImage(mask, Math.cos(a) * radiusX, Math.sin(a) * radiusY);
+  }
+  context.globalCompositeOperation = "source-in";
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, outline.width, outline.height);
+  outlines.set(mask, { key, canvas: outline });
+  return outline;
+}
 export function drawSubject(
   context: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
@@ -195,17 +216,11 @@ export function drawSubject(
     l.fillRect(0, 0, layer.width, layer.height);
     l.globalCompositeOperation = "source-over";
   } else {
-    context.save();
-    context.shadowColor = "#ffffff";
-    context.shadowBlur = 0;
     const radius = Math.max(3, canvas.width * 0.01);
-    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
-      context.shadowOffsetX = Math.cos(a) * radius;
-      context.shadowOffsetY = Math.sin(a) * radius;
-      context.drawImage(layer, 0, 0);
-    }
-    context.restore();
+    const outline = subjectOutline(mask, radius * mask.width / width, radius * mask.height / height);
+    if (!outline) return false;
+    context.drawImage(outline, x, y, width, height);
   }
   context.drawImage(layer, 0, 0);
   return true;
-        }
+  }
