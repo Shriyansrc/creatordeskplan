@@ -21,7 +21,7 @@ export async function discoverReferences(platform: WebPlatform, idea: string, ni
   if (!domain && platform !== "ig") return [];
   const res = await generateResponse({
     model: "openai/gpt-6.1-terra",
-    input: `Search the web for real, public ${WHAT[platform]} about this idea and list their page links. Idea: ${idea}.${niche ? ` Topic area: ${niche}.` : ""} Only individual video or post pages, no channels, no search pages. Return at most eight links, concisely.`,
+    input: `Search the web for real, public ${WHAT[platform]} that a creator could copy the format of. Idea: ${idea}.${niche ? ` Topic area: ${niche}.` : ""} Search the way a viewer would: use the exact phrases people type for this topic plus one or two close variants. Prefer videos whose title clearly matches the idea, that are popular on the page, and that are recent. Skip compilations, ads, news, channels, playlists and search pages. Only individual video or post pages that you actually found. Never guess or build a link. Return at most eight links, concisely.`,
     tools: [{ type: "web_search", ...(domain ? { filters: { allowed_domains: [domain] } } : {}), search_context_size: "low" }],
     max_tool_calls: 1,
     max_output_tokens: 1024,
