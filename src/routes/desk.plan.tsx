@@ -38,7 +38,7 @@ function Plan() {
   const [sel, setSel] = useState<string>("");
   const [scriptDepth, setScriptDepth] = useState<"auto" | "brief" | "deep">("auto");
   const [myStyle] = usePersistentState<StyleResult | null>("style", null);
-  const niche = d.niche?.title ?? "";
+  const niche = d.pickedNiches.map((x) => x.title).join(" + ");
   const base = { topic: p.topic, goal: p.goal, niche, platforms: p.platforms };
   const key = JSON.stringify(base);
   const research = d.research && d.research.key === key ? d.research.data : null;
@@ -197,4 +197,4 @@ function Plan() {
       )}
     </>
   );
-          }
+}
