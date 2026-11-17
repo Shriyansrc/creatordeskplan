@@ -1,3 +1,4 @@
+import { requireExportQuality } from "./export-quality";
 import { needsSubjectMasks, subjectBeatError, subjectModeAt } from "./subject-beats";
 import { drawSubject, subjectMasksReady } from "./subject-mask";
 import { drawWrapping, DEFAULT_WRAPPING } from "./wrapping";
@@ -220,7 +221,9 @@ async function renderWebM(
     }
     recorder.stop();
     await stopped;
-    return await withWebmDuration(new Blob(chunks, { type: "video/webm" }), total * 1000);
+    const rendered = await withWebmDuration(new Blob(chunks, { type: "video/webm" }), total * 1000);
+    await requireExportQuality(rendered, total);
+    return rendered;
   } finally {
     video.pause();
     if (recorder.state !== "inactive") recorder.stop();
@@ -270,4 +273,4 @@ export async function exportProject(
   const blob = format === "mp4" ? await convertToMp4(webm, onProgress) : webm;
   onProgress(1, "Export ready");
   return blob;
-                      }
+              }
