@@ -1,4 +1,6 @@
 import { drawKaraoke } from "./karaoke";
+import { captionFontString, loadCaptionFonts, paintCaptionText } from "./caption-font";
+import { drawImpact } from "./impact";
 import { applyFrameColor } from "./color";
 import { drawMotion, motionError } from "./motion-scenes";
 import { renderOffline } from "./offline-export";
@@ -94,30 +96,29 @@ export function drawFrame(
   }
   if (project.captionsEnabled && project.wrappingCaptions?.enabled) drawWrapping(context, canvas, project, transcript, timelineTime, { ...DEFAULT_WRAPPING, ...project.wrappingCaptions });
   if (project.captionsEnabled && project.captionStyle.karaoke && !project.wrappingCaptions?.enabled) drawKaraoke(context, canvas, project, transcript, timelineTime);
-  if (project.captionsEnabled && !project.captionStyle.karaoke && !project.wrappingCaptions?.enabled) {
+  if (project.captionsEnabled && !project.captionStyle.karaoke && !project.wrappingCaptions?.enabled && project.captionStyle.preset === "impact") {
+    drawImpact(context, canvas, project, transcript, timelineTime);
+  }
+  if (project.captionsEnabled && !project.captionStyle.karaoke && !project.wrappingCaptions?.enabled && project.captionStyle.preset !== "impact") {
     const ownerStyle = project.captionStyle.preset === "owner";
     const cue = ownerStyle ? captionAt(captionCues(project, transcript), timelineTime) : undefined;
     const word = ownerStyle ? cue?.word : activeWord(project, transcript, clip, sourceTime);
     if (word) {
-      const owner = project.captionStyle.preset === "owner";
-      const size = project.captionStyle.size * (canvas.width / 720);
-      context.font = owner ? `italic 800 ${size}px CDCaption, sans-serif` : `600 ${size}px CDBody, sans-serif`;
+      const style = project.captionStyle;
+      const s = canvas.width / 720;
+      const size = style.size * s;
+      context.font = captionFontString(style, "caption", size);
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.fillStyle = owner && project.keywordHighlights && cue?.keyword ? "#FBED4F" : project.captionStyle.color;
+      context.fillStyle = ownerStyle && project.keywordHighlights && cue?.keyword ? "#FBED4F" : style.color;
       const styled = context as CanvasRenderingContext2D & { letterSpacing?: string };
-      styled.letterSpacing = owner ? `${-0.05 * size}px` : "0px";
+      styled.letterSpacing = ownerStyle ? `${-0.05 * size}px` : "0px";
       context.save();
       const start = cue?.start ?? wordTimelineTime(project, word) ?? timelineTime;
-      const pop = owner ? captionScale(timelineTime - start) : 1;
-      context.translate(canvas.width / 2, canvas.height * (project.captionStyle.position / 100));
+      const pop = (style.animation ?? (ownerStyle ? "pop" : "none")) === "pop" ? captionScale(timelineTime - start) : 1;
+      context.translate(canvas.width / 2, canvas.height * (style.position / 100));
       context.scale(pop, pop);
-      if (owner) {
-        context.shadowColor = "rgba(0,0,0,0.5)";
-        context.shadowBlur = 4;
-        context.shadowOffsetY = 2;
-      }
-      context.fillText(cue?.text ?? word.word, 0, 0, canvas.width * 0.92);
+      paintCaptionText(context, cue?.text ?? word.word, 0, 0, style, s, "caption", canvas.width * 0.92);
       context.restore();
       styled.letterSpacing = "0px";
     }
@@ -127,8 +128,7 @@ export function drawFrame(
 }
 
 export async function loadCaptionFont() {
-  const fonts = await document.fonts.load('italic 800 64px CDCaption');
-  if (!fonts.length) throw new Error("The Font caption font could not load. Try again before applying or exporting captions.");
+  await loadCaptionFonts();
 }
 
 async function convertToMp4(webm: Blob, onProgress: (value: number, label: string) => void) {
@@ -179,4 +179,4 @@ export async function exportProject(
   const blob = format === "mp4" ? await convertToMp4(webm, onProgress) : webm;
   onProgress(1, "Export ready");
   return blob;
-}
+      }
