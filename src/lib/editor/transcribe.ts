@@ -74,20 +74,22 @@ export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgr
   });
   onProgress(`Reading the audio of ${asset.name}…`);
   const audio = await decodeAudio(asset.url);
-  const make = (word: string, start: number, end: number): TranscriptWord => ({ id: makeLocalId("word"), clipId: clip.originId, word, start, end });
+  const make = (word: string, start: number, end: number, endInferred = false): TranscriptWord => ({ id: makeLocalId("word"), clipId: clip.originId, word, start, end, ...(endInferred ? { endInferred: true } : {}) });
 
   const duration = audio.length / SAMPLE_RATE;
   const clean = (chunks: WhisperChunk[], offset: number): TranscriptWord[] => chunks.flatMap((chunk, index) => {
     const word = chunk.text.trim();
     const start = chunk.timestamp?.[0];
     let end = chunk.timestamp?.[1];
+    let inferred = false;
     // The model leaves the very last word without an end; use the next word's start or a short tail, clamped to the audio.
     if (typeof start === "number" && (typeof end !== "number" || end <= start)) {
       const next = chunks[index + 1]?.timestamp?.[0];
       end = typeof next === "number" && next > start ? next : Math.min(start + 0.4, duration - offset);
+      inferred = true;
     }
     if (!word || typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) return [];
-    return [make(word, start + offset, end + offset)];
+    return [make(word, start + offset, end + offset, inferred)];
   });
 
   if (hinglish) {
