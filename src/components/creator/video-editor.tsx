@@ -292,8 +292,11 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     if (!prompt.trim()) return;
     setBusy("Getting AI edit operations…"); setError(""); setPlaying(false);
     try {
-      const compact = { ratio: project.ratio, clips: project.clips.map((clip) => ({ id: clip.id, sourceId: clip.sourceId, name: clip.name, trimIn: clip.trimIn, trimOut: clip.trimOut, speed: clip.speed, volume: clip.volume, muted: clip.muted })) };
-      const input = editInputSchema.parse({ prompt, transcript: transcript.slice(0, 10000).map((word) => ({ clipId: project.clips.find((clip) => clip.originId === word.clipId)?.id ?? word.clipId, word: word.word, start: word.start, end: word.end })), timeline: compact });
+      const available = project.clips.filter((clip) => assets.some((asset) => asset.sourceId === clip.sourceId));
+      if (!available.length) throw new Error("Re-add your clip files first: the AI can only edit clips that are loaded in this session.");
+      const availableOrigins = new Set(available.map((clip) => clip.originId));
+      const compact = { ratio: project.ratio, clips: available.map((clip) => ({ id: clip.id, sourceId: clip.sourceId, name: clip.name, trimIn: clip.trimIn, trimOut: clip.trimOut, speed: clip.speed, volume: clip.volume, muted: clip.muted })) };
+      const input = editInputSchema.parse({ prompt, transcript: transcript.filter((word) => availableOrigins.has(word.clipId)).slice(0, 10000).map((word) => ({ clipId: available.find((clip) => clip.originId === word.clipId)?.id ?? word.clipId, word: word.word, start: word.start, end: word.end })), timeline: compact });
       const response = editResponseSchema.parse(await callAI<unknown, unknown>("edit", input));
       const operations = await hydrateSilence(response.operations);
       const preview = applyOperations(project, operations);
