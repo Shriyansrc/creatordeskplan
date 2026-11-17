@@ -40,3 +40,4 @@ use the editor.
 - Reel jobs go through the `ReelJobService` interface in `src/lib/reel-jobs/` (local fallback, remote when a backend exists), so syncing can be added without changing callers.
 - Sign-in is optional Google auth via `src/hooks/use-auth.ts` (Lovable Cloud broker); no route is gated, because the studio must keep working signed out.
 - Reference discovery authenticates every request with backend auth.getUser before reading caches; a service-role-only atomic rolling-hour reservation RPC runs before inference, because quotas must survive instances and fail closed without affecting local studio access.
+- Script output passes through `src/lib/ai/script-style.ts` (shared voice rules + dash removal), because owner script rules must hold even when the model slips.
