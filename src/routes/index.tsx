@@ -738,11 +738,11 @@ function Landing({ go }: { go: (s: Screen) => void }) {
               <div className="body">
                 <div className="plat">
                   <span className="dot" />
-                  instagram<small>ready</small>
+                  instagram<small>caption ready</small>
                 </div>
                 <div className="plat">
                   <span className="dot" />
-                  youtube<small>draft</small>
+                  youtube<small>caption ready</small>
                 </div>
                 <div className="rowline" style={{ marginTop: 8 }}>
                   <span>caption for each platform</span>
@@ -753,11 +753,8 @@ function Landing({ go }: { go: (s: Screen) => void }) {
           </div>
           <div className="txt">
             <span className="bubble">post it everywhere</span>
-            <h2>export once, post one by one</h2>
-            <p>
-              pick your platforms, export, then open each platform's composer with your caption ready. direct posting is
-              not connected, so you press post yourself.
-            </p>
+            <h2 className="balance">export once, then post</h2>
+            <p>pick your platforms and export once. each platform opens with your caption ready, and you press post yourself.</p>
             <div className="dots">
               <i />
               <i />
