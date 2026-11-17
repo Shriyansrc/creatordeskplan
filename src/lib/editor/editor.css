@@ -33,3 +33,61 @@
 .talking-head-editor .local-style-controls input[type="range"] { display: block; width: 100%; min-height: 32px; }
 .talking-head-editor .local-style-controls button, .talking-head-editor .local-style-controls .btn { margin: 4px 8px 8px 0; white-space: normal; min-height: 44px; }
 @media (min-width: 900px) { .talking-head-editor .local-style-controls { grid-template-columns: 1fr 1fr 1fr; } }
+/* One bounded workspace: the inspector scrolls without losing the video. */
+.dk-main:has(.workspace-editor) { max-width: 1600px; padding: 12px 20px 18px; }
+.workspace-editor { height: calc(100dvh - 110px); min-height: 540px; display: flex; flex-direction: column; gap: 10px; }
+.workspace-editor .editor-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; }
+.old-ed .workspace-editor .editor-header h1 { font-size: 30px !important; margin: 0; }
+.workspace-editor .editor-header .sub { font-size: 13px; }
+.workspace-editor .editor-header .btn { padding: 9px 12px; min-height: 40px; }
+.workspace-editor .editor-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 340px; grid-template-rows: 44px minmax(0,1fr); grid-template-areas: "tools tools" "viewer inspector"; gap: 10px; margin: 0 !important; }
+.workspace-editor .editor-toolbar { grid-area: tools; display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: thin; }
+.workspace-editor .editor-toolbar button { flex: 0 0 auto; width: auto; min-height: 40px; padding: 8px 14px; margin: 0; white-space: nowrap; }
+.workspace-editor .editor-viewer { grid-area: viewer; min-height: 0; display: flex; flex-direction: column; background: #dce3ed; border-radius: 14px; overflow: hidden; }
+.workspace-editor .estage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; gap: 6px; background: #192434; }
+.workspace-editor .editor-phone { flex: 1; min-height: 0; max-height: calc(100% - 46px); height: auto; width: auto; max-width: 100%; border-radius: 6px; }
+.workspace-editor .editor-phone:has(.editor-empty) { min-height: 0 !important; height: 100%; max-height: calc(100% - 46px); }
+.workspace-editor .eratio { display: flex; align-items: center; justify-content: center; gap: 5px; flex: none; width: 100%; margin: 0; color: #f1f4f8; }
+.workspace-editor .eratio .chip, .workspace-editor .eratio .btn { font-size: 12px; padding: 5px 9px; min-height: 32px; margin: 0; }
+.workspace-editor .editor-timeline { flex: none; border-radius: 0; padding: 8px; }
+.workspace-editor .timeline-ruler { height: 12px; margin-bottom: 6px; }
+.workspace-editor .editor-strip { min-height: 50px; max-height: 62px; }
+.workspace-editor .timeline-clip { padding: 4px 7px; min-width: 110px; gap: 2px; }
+.workspace-editor .timeline-clip video, .workspace-editor .timeline-clip i { display: none; }
+.workspace-editor .timeline-clip span, .workspace-editor .timeline-clip small { font-size: 12px; }
+.workspace-editor .audio-track, .workspace-editor .capbar { display: none; }
+.workspace-editor .editor-inspector { grid-area: inspector; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 14px; }
+.workspace-editor .editor-inspector .panel { padding: 0; background: transparent; border: 0; border-radius: 0; }
+.workspace-editor .editor-target { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 10px; }
+.workspace-editor .editor-inspector .lab { margin-bottom: 12px; }
+.workspace-editor .editor-inspector input[type="range"] { display: block; min-height: 30px; width: 100%; }
+.workspace-editor .editor-inspector h2 { font-size: 24px; }
+.workspace-editor .editor-inspector p { font-size: 13px; line-height: 1.45; }
+.workspace-editor .local-style-controls { grid-template-columns: 1fr; margin: 10px 0; gap: 12px; }
+.workspace-editor .editor-prompt { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.workspace-editor summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.workspace-editor .editor-export { flex: none; }
+.workspace-editor .editor-export .panel { margin: 0 !important; padding: 0; border: 0; background: transparent; }
+.workspace-editor .editor-export .lab { display: none; }
+.workspace-editor .editor-export .panel > .note { display: none; }
+.workspace-editor .editor-export select { padding: 8px; width: 220px; font-size: 12px; }
+.workspace-editor .editor-export .btn { padding: 8px 12px; min-height: 36px; }
+.workspace-editor .editor-message { font-size: 13px; max-height: 72px; overflow: auto; margin: 0; }
+@media(max-width:820px) {
+  .dk-main:has(.workspace-editor) { padding: 8px 10px 72px; }
+  .workspace-editor { height: calc(100dvh - 146px); min-height: 480px; gap: 7px; }
+  .old-ed .workspace-editor .editor-header h1 { font-size: 24px !important; }
+  .workspace-editor .editor-header .sub { display: none; }
+  .workspace-editor .editor-header .row { gap: 5px; }
+  .workspace-editor .editor-header .btn { font-size: 12px; padding: 7px 9px; min-height: 34px; }
+  .workspace-editor .editor-workspace { grid-template-columns: minmax(0,1fr); grid-template-rows: 42px minmax(190px,34dvh) minmax(120px,1fr); grid-template-areas: "tools" "viewer" "inspector"; gap: 7px; }
+  .workspace-editor .estage { padding: 6px; flex-direction: row; gap: 12px; }
+  .workspace-editor .editor-phone { flex: none; height: 100%; max-height: 100%; max-width: calc(100% - 110px); }
+  .workspace-editor .eratio { width: 95px; flex-wrap: wrap; gap: 4px; }
+  .workspace-editor .eratio .sp { display: none; }
+  .workspace-editor .eratio .btn { width: 100%; }
+  .workspace-editor .eratio span:last-child { width: 100%; text-align: center; }
+  .workspace-editor .editor-inspector { padding: 10px 12px; }
+  .workspace-editor .editor-export select { width: 160px; max-width: 42vw; }
+  .workspace-editor .editor-export .btn { font-size: 12px; }
+                                            }
