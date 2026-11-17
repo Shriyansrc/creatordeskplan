@@ -13,7 +13,8 @@ import { DIMENSIONS, drawFrame, exportProject, loadCaptionFont } from "@/lib/edi
 import { applyOperations, clipDuration, clipFromAsset, clipStart, createProject, describeOperation, locateTime, projectDuration, wordTimelineTime } from "@/lib/editor/project";
 import { CAPTION_FONT_OPTIONS, captionDefaultFont } from "@/lib/editor/caption-font";
 import { CaptionPreview } from "@/lib/editor/caption-preview";
-import { addSessionClips, clearSessionExport, getSessionClips, saveSessionExport } from "@/lib/editor/session-store";
+import { addSessionClips, clearSessionExport, getSessionClips, libraryStatus, restoreSessionClips, saveSessionExport } from "@/lib/editor/session-store";
+import { saveVideo } from "@/lib/editor/library";
 import { handoffSnapshot, markHandedOff, mergeSessionClips } from "@/lib/editor/handoff";
 import { transcribeClip } from "@/lib/editor/transcribe";
 import type { CaptionStyle, ClipAsset, EditorClip, EditorProject, PendingEdit, TranscriptWord } from "@/lib/editor/types";
@@ -75,6 +76,8 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   const cancelTranscription = useRef(false);
   const transcriptionRun = useRef(0);
   const [error, setError] = useState("");
+  const [libReady, setLibReady] = useState(false);
+  const [libNote, setLibNote] = useState("");
   const [playhead, setPlayhead] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [exportFormat, setExportFormat] = useState<"webm" | "mp4">("webm");
@@ -120,12 +123,19 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   }, [view, activeClip, activeAsset?.url, transcript, exporting]);
 
   useEffect(() => {
-    const available = getSessionClips();
-    setAssets(available);
+    // Bring back clips kept on this browser (same ids as the saved timeline), then let the handoff run.
+    let live = true;
+    void restoreSessionClips().then(() => {
+      if (!live) return;
+      setAssets(getSessionClips());
+      if (libraryStatus.error) setLibNote(`Clips could not be kept on this browser (${libraryStatus.error}). They last for this visit only.`);
+      setLibReady(true);
+    });
+    return () => { live = false; };
   }, []);
 
   useEffect(() => {
-    if (!projectReady) return;
+    if (!projectReady || !libReady) return;
     const available = getSessionClips();
     setAssets(available);
     if (available.length) {
@@ -133,7 +143,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       setProject((current) => mergeSessionClips(current, available, handed, clipFromAsset));
       markHandedOff(available);
     }
-  }, [projectReady, setProject]);
+  }, [projectReady, libReady, setProject]);
 
   // Clips saved from an earlier visit may have lost their files (files only live for the session).
   // Never delete them, but do not let the preview sit on, or play through, a clip with no file.
@@ -429,6 +439,9 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       const name = `creator-desk-${Date.now()}.${exportFormat}`;
       const saved = saveSessionExport(blob, name);
       setExportUrl(saved.url); setExportName(name);
+      void saveVideo({ id: `video-${Date.now()}`, name, type: blob.type, size: blob.size, format: exportFormat, savedAt: Date.now(), clipCount: project.clips.length, platforms: selectedPlatforms(st).map(String), blob }).then((result) => {
+        setLibNote(result.ok ? "Saved to Your videos on this browser. Download it too if you want a copy elsewhere." : `Could not keep this video on this browser (${result.error}). Download it now so it is not lost.`);
+      });
       window.localStorage.setItem("cd:export", JSON.stringify({ name, type: blob.type, size: blob.size, createdAt: new Date().toISOString(), platforms: selectedPlatforms(st) }));
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : typeof cause === "string" ? cause : JSON.stringify(cause);
@@ -491,6 +504,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     <header className="editor-header"><div><h1>Edit your video</h1><p className="sub">Your footage. Reversible edits.</p></div><div className="row"><button className="btn s g" onClick={undo} disabled={!history.current.length}>Undo</button><button className="btn s g" onClick={redo} disabled={!future.current.length}>Redo</button><button className="btn s" onClick={doExport} disabled={exporting || Boolean(busy) || !project.clips.length}>Save video</button></div></header>
     {busy && <p className="editor-message" role="status">{busy}</p>}
     {error && <div className="notice editor-message" role="alert">{error}</div>}
+    {libNote && <div className="notice editor-message" role="status">{libNote}</div>}
     <div className="ed editor-workspace">
       <nav className="tools editor-toolbar" aria-label="Editing tools"><label className="editor-tool-select">Tool<select aria-label="Choose editing tool" value={st.tool} onChange={event => set({ tool: event.target.value })}>{TOOLS.map(tool => <option key={tool} value={tool}>{tool}</option>)}</select></label>{([['Assist',['AI']],['Footage',['Media','Reference','Trim','Crop']],['Words',['Transcript','Captions','Engage']],['Look',['Style','Colour','Motion','Subject']],['Audio',['Sound']]] as const).map(([group,tools])=><div className="tool-group" key={group}><span>{group}</span>{tools.map(tool=><button key={tool} className={st.tool===tool?'on':''} onClick={()=>set({tool})}>{TOOL_ICONS[tool]}<em>{tool==='Engage'?'Text & hook':tool==='Sound'?'Music & sound':tool}</em></button>)}</div>)}</nav>
       <section className="editor-viewer" aria-label="Video and timeline">
