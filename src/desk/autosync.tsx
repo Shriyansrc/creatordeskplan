@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { applyRemote, fetchRemote, localBundle, pushLocal, type Remote } from "@/desk/sync";
-import { getDesk } from "@/desk/store";
+import { getDesk, resetDesk } from "@/desk/store";
+
+const OWNER = "cd:owner";
+const getOwner = () => { try { return window.localStorage.getItem(OWNER); } catch { return null; } };
+const setOwner = (id: string) => { try { window.localStorage.setItem(OWNER, id); } catch { /* ignore */ } };
 
 /**
  * Keeps a signed-in user's plans in their account without a manual step.
@@ -32,6 +36,7 @@ export function AutoSync() {
   const { user } = useAuth();
   const uid = user?.id ?? null;
   const [conflict, setConflict] = useState<NonNullable<Remote> | null>(null);
+  const [foreign, setForeign] = useState(false);
   const [note, setNote] = useState("");
   const ready = useRef(false);
   const last = useRef("");
@@ -40,6 +45,7 @@ export function AutoSync() {
     ready.current = false;
     last.current = "";
     setConflict(null);
+    setForeign(false);
     if (!uid) return;
     let dead = false;
     void (async () => {
@@ -51,17 +57,37 @@ export function AutoSync() {
       }
       const remoteUsable = !!remote && !!remote.state?.desk?.profile?.setupDone;
       const localSetup = getDesk().profile.setupDone;
+      const owner = getOwner();
+      const otherAccount = localSetup && !!owner && owner !== uid;
+      if (otherAccount) {
+        // Plans in this browser belong to a different account. Never copy them into this one silently.
+        backup("plans left in this browser by another account", localBundle());
+        if (remote && remoteUsable) {
+          const e = applyRemote(remote);
+          if (e) setNote(e);
+          else {
+            setOwner(uid);
+            last.current = stable(localBundle());
+            ready.current = true;
+          }
+        } else {
+          setForeign(true);
+        }
+        return;
+      }
       if (remote && remoteUsable) {
         if (!localSetup) {
           const e = applyRemote(remote);
           if (e) setNote(e);
           else {
+            setOwner(uid);
             last.current = stable(localBundle());
             ready.current = true;
           }
           return;
         }
         if (stable(localBundle()) === stable(remote.state)) {
+          setOwner(uid);
           last.current = stable(localBundle());
           ready.current = true;
           return;
@@ -69,6 +95,7 @@ export function AutoSync() {
         setConflict(remote);
         return;
       }
+      if (localSetup) setOwner(uid);
       ready.current = true;
     })();
     return () => {
@@ -79,7 +106,7 @@ export function AutoSync() {
   useEffect(() => {
     if (!uid) return;
     const tick = async () => {
-      if (!ready.current || conflict || !getDesk().profile.setupDone) return;
+      if (!ready.current || conflict || foreign || !getDesk().profile.setupDone) return;
       const now = stable(localBundle());
       if (now === last.current) return;
       last.current = now;
@@ -87,7 +114,10 @@ export function AutoSync() {
       if (e) {
         last.current = "";
         setNote(`Not saved to your account yet: ${e}`);
-      } else setNote("");
+      } else {
+        setOwner(uid);
+        setNote("");
+      }
     };
     const id = window.setInterval(() => void tick(), 4000);
     const onHide = () => {
@@ -98,7 +128,7 @@ export function AutoSync() {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [uid, conflict]);
+  }, [uid, conflict, foreign]);
 
   const box = { position: "fixed", left: 12, right: 12, bottom: 12, zIndex: 50, background: "#fff", border: "1px solid #c9d4e6", borderRadius: 12, padding: 14, boxShadow: "0 8px 30px rgba(20,25,35,.18)", fontSize: 15, maxWidth: 560 } as const;
 
@@ -113,6 +143,7 @@ export function AutoSync() {
             const e = applyRemote(conflict);
             if (e) setNote(e);
             else {
+              setOwner(uid);
               last.current = stable(localBundle());
               ready.current = true;
               setConflict(null);
@@ -120,10 +151,33 @@ export function AutoSync() {
           }}>Use my account copy</button>
           <button type="button" className="dk-btn secondary" style={{ fontSize: 16, padding: "10px 16px" }} onClick={() => {
             backup("account copy before saving this browser", conflict.state);
+            setOwner(uid);
             last.current = "";
             ready.current = true;
             setConflict(null);
           }}>Keep this browser's copy</button>
+        </div>
+      </div>
+    );
+  }
+  if (foreign && uid) {
+    return (
+      <div style={box} role="alertdialog" aria-label="Plans from another account">
+        <p style={{ margin: "0 0 10px" }}>This browser has plans that were saved under a different account, and this account has no saved copy yet. What should happen to them?</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="dk-btn" style={{ fontSize: 16, padding: "10px 16px" }} onClick={() => {
+            setOwner(uid);
+            last.current = "";
+            ready.current = true;
+            setForeign(false);
+          }}>Save them to this account</button>
+          <button type="button" className="dk-btn secondary" style={{ fontSize: 16, padding: "10px 16px" }} onClick={() => {
+            resetDesk();
+            setOwner(uid);
+            last.current = stable(localBundle());
+            ready.current = true;
+            setForeign(false);
+          }}>Start fresh here</button>
         </div>
       </div>
     );
