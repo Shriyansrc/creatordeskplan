@@ -183,7 +183,7 @@ function Plan() {
             <h2 style={{ margin: "28px 0 6px" }}>Analyse a reference</h2>
             <ReferenceAnalysis topic={topic.title} niche={niche} />
             <h2 style={{ margin: "28px 0 6px" }}>Reference videos</h2>
-            <p style={{ marginBottom: 12 }}>Real videos for this idea from each platform you post to, found by web search and checked on the platform. Open one and make your own version.</p>
+            <p style={{ marginBottom: 12 }}>YouTube videos and related LinkedIn posts found by web search. LinkedIn video playback is unverified; Instagram and X discovery are still unresolved.</p>
             <ReferencePanel st={{ topic: topic.title, goal: p.goal, niche: 99, day: topic.day } as unknown as StudioShared} pains={p.painPoints.map((x) => [x])} />
           </>
         )
