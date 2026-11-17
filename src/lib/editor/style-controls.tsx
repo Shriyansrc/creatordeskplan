@@ -1,3 +1,4 @@
+import { DEFAULT_WRAPPING } from "./wrapping";
 import { useState } from "react";
 import { DEFAULT_FISHEYE } from "./fisheye";
 import { planSfx, rememberMusic, hasMusic } from "./soundtrack";
@@ -16,6 +17,9 @@ export function StyleControls({ project, transcript, change, lens }: { project: 
       <label className="row"><input type="checkbox" checked={project.keywordHighlights ?? false} onChange={(event) => highlights(event.target.checked)} />Keyword highlight</label>
       <label className="row"><input type="checkbox" checked={project.sfxEnabled ?? false} onChange={(event) => change({ ...project, sfxEnabled: event.target.checked })} />Sound effects</label>
       <p>Sounds are synthesised, not recorded.</p>
+      <label className="row"><input type="checkbox" checked={project.wrappingCaptions?.enabled ?? false} onChange={(event) => change({ ...project, wrappingCaptions: { ...DEFAULT_WRAPPING, ...project.wrappingCaptions, enabled: event.target.checked }, captionsEnabled: true })} />Wrapping captions (manual subject placement)</label>
+      {project.wrappingCaptions?.enabled && <section><p>Words build in speech-timed groups around this ellipse. This does not track the face. Adjust the centre to keep text away from eyes and mouth. Turn it off to return to Font captions.</p>{([['centreX','Subject centre horizontal',15,85],['centreY','Subject centre vertical',20,70],['radiusX','Horizontal distance',15,35],['radiusY','Vertical distance',10,30]] as const).map(([key,label,min,max])=><label className="lab" key={key}>{label}<input type="range" aria-label={label} min={min} max={max} value={project.wrappingCaptions?.[key] ?? DEFAULT_WRAPPING[key]} onChange={(event)=>change({...project,wrappingCaptions:{...DEFAULT_WRAPPING,...project.wrappingCaptions,[key]:Number(event.target.value)}})} /></label>)}</section>}
+
       <ul aria-label="SFX list">{(project.sfx ?? []).map((event) => <li key={event.id}>{event.kind === "cameraFlash" ? "camera flash" : event.kind} at {event.time.toFixed(2)}s, {event.duration.toFixed(2)}s. {event.reason}{!project.sfxEnabled ? " (off)" : ""}</li>)}</ul>
     </section>
     <section aria-label="Fisheye panel"><h2>Fisheye</h2>
@@ -43,4 +47,4 @@ export function StyleControls({ project, transcript, change, lens }: { project: 
       {error && <p role="alert">{error}</p>}
     </section>
   </div>;
-}
+      }
