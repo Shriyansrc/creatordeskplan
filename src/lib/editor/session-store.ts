@@ -1,4 +1,5 @@
 import type { ClipAsset } from "./types";
+import { askBrowserToKeepStorage, listClips, saveClip } from "./library";
 
 let clips: ClipAsset[] = [];
 let exportFile: { blob: Blob; url: string; name: string } | null = null;
@@ -39,7 +40,41 @@ export async function addSessionClips(files: File[]) {
   const inspected: ClipAsset[] = [];
   for (const file of files) inspected.push(await inspectVideoFile(file));
   clips = [...clips, ...inspected];
+  persistClips(inspected);
   return inspected;
+}
+
+/** Keeps a copy of each clip on this browser so it survives a reload. Failure never blocks editing. */
+function persistClips(assets: ClipAsset[]) {
+  askBrowserToKeepStorage();
+  for (const asset of assets) void saveClip({ sourceId: asset.sourceId, name: asset.name, type: asset.file.type, blob: asset.file, savedAt: Date.now() });
+}
+
+export let libraryStatus: { restored: number; error: string } = { restored: 0, error: "" };
+let restoring: Promise<ClipAsset[]> | null = null;
+
+/** Brings back clips kept on this browser, under their original ids, in the order they were saved. Safe to call twice. */
+export function restoreSessionClips(): Promise<ClipAsset[]> {
+  restoring ??= (async () => {
+    const stored = await listClips();
+    if (!stored.ok) { libraryStatus = { restored: 0, error: stored.error }; return [];
+    }
+    const have = new Set(clips.map((clip) => clip.sourceId));
+    const restored: ClipAsset[] = [];
+    for (const record of [...stored.value].sort((a, b) => a.savedAt - b.savedAt)) {
+      if (have.has(record.sourceId)) continue;
+      try {
+        const file = new File([record.blob], record.name, { type: record.type });
+        const asset = await inspectVideoFile(file);
+        restored.push({ ...asset, sourceId: record.sourceId });
+      } catch { /* a stored file that cannot be read stays stored; its timeline clip still shows "File needed" */ }
+    }
+    const fresh = restored.filter((asset) => !clips.some((clip) => clip.sourceId === asset.sourceId));
+    clips = [...fresh, ...clips];
+    libraryStatus = { restored: fresh.length, error: "" };
+    return fresh;
+  })();
+  return restoring;
 }
 
 export function removeSessionClip(sourceId: string) {
@@ -110,3 +145,4 @@ export function removeEditorCopy(item: GeneratedMedia) {
   if (item.sourceId) removeSessionClip(item.sourceId);
   delete item.sourceId;
 }
+
