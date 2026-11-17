@@ -20,7 +20,7 @@ export async function transcribeClip(clip: EditorClip, asset: ClipAsset, onProgr
   const result = Array.isArray(output) ? output[0] : output;
   const chunks = result?.chunks ?? [];
   return chunks.flatMap((chunk) => {
-    const word = chunk.text.trim().toLowerCase();
+    const word = chunk.text.trim();
     const start = chunk.timestamp?.[0];
     const end = chunk.timestamp?.[1];
     if (!word || typeof start !== "number") return [];

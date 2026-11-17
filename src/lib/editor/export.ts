@@ -2,6 +2,9 @@ import { activeWord, clipDuration, clipStart, projectDuration, wordTimelineTime 
 import type { ClipAsset, EditorClip, EditorProject, TranscriptWord } from "./types";
 
 import { captionScale, timelineZoom } from "./talking-head";
+import { captionAt, captionCues } from "./captions";
+import { drawFisheye } from "./fisheye";
+import { prepareSoundtrack } from "./soundtrack";
 
 export const DIMENSIONS = { "9:16": [720, 1280], "1:1": [900, 900], "4:5": [864, 1080], "16:9": [1280, 720] } as const;
 const SHADOW_WEIGHTS = Float32Array.from({ length: 256 }, (_, luma) => Math.max(0, 1 - luma / (255 * 0.45)) ** 2);
@@ -86,6 +89,7 @@ export function drawFrame(
   }
 
   const overlay = project.overlays.find((item) => timelineTime >= item.start && timelineTime <= item.end);
+  if (project.fisheye?.enabled) drawFisheye(context, canvas, project.fisheye, timelineTime);
   if (overlay) {
     context.font = "600 42px CDBody, sans-serif";
     context.textAlign = "center";
@@ -94,18 +98,20 @@ export function drawFrame(
     context.fillText(overlay.text, canvas.width / 2, canvas.height * 0.2, canvas.width * 0.9);
   }
   if (project.captionsEnabled) {
-    const word = activeWord(project, transcript, clip, sourceTime);
+    const ownerStyle = project.captionStyle.preset === "owner";
+    const cue = ownerStyle ? captionAt(captionCues(project, transcript), timelineTime) : undefined;
+    const word = ownerStyle ? cue?.word : activeWord(project, transcript, clip, sourceTime);
     if (word) {
       const owner = project.captionStyle.preset === "owner";
       const size = project.captionStyle.size * (canvas.width / 720);
       context.font = owner ? `italic 800 ${size}px CDCaption, sans-serif` : `600 ${size}px CDBody, sans-serif`;
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.fillStyle = project.captionStyle.color;
+      context.fillStyle = owner && project.keywordHighlights && cue?.keyword ? "#FBED4F" : project.captionStyle.color;
       const styled = context as CanvasRenderingContext2D & { letterSpacing?: string };
       styled.letterSpacing = owner ? `${-0.05 * size}px` : "0px";
       context.save();
-      const start = wordTimelineTime(project, word) ?? timelineTime;
+      const start = cue?.start ?? wordTimelineTime(project, word) ?? timelineTime;
       const pop = owner ? captionScale(timelineTime - start) : 1;
       context.translate(canvas.width / 2, canvas.height * (project.captionStyle.position / 100));
       context.scale(pop, pop);
@@ -114,7 +120,7 @@ export function drawFrame(
         context.shadowBlur = 4;
         context.shadowOffsetY = 2;
       }
-      context.fillText(word.word.toLowerCase(), 0, 0, canvas.width * 0.92);
+      context.fillText(cue?.text ?? word.word, 0, 0, canvas.width * 0.92);
       context.restore();
       styled.letterSpacing = "0px";
     }
@@ -142,15 +148,14 @@ async function renderWebM(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas rendering is unavailable in this browser.");
   const video = document.createElement("video");
+  video.muted = true;
   video.playsInline = true;
   video.preload = "auto";
   const stream = canvas.captureStream(30);
   const audioContext = new AudioContext();
-  const source = audioContext.createMediaElementSource(video);
-  const gain = audioContext.createGain();
   const audioDestination = audioContext.createMediaStreamDestination();
-  source.connect(gain);
-  gain.connect(audioDestination);
+  const soundtrack = await prepareSoundtrack(audioContext, project, assets, transcript);
+  let audioSource: AudioBufferSourceNode | undefined;
   for (const track of audioDestination.stream.getAudioTracks()) stream.addTrack(track);
   const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((type) => MediaRecorder.isTypeSupported(type));
   if (!mimeType) throw new Error("WebM recording is not supported by this browser.");
@@ -171,7 +176,6 @@ async function renderWebM(
       if (video.readyState < 1) await waitFor("loadedmetadata", video);
       if (video.readyState < 2) await waitFor("loadeddata", video);
       video.playbackRate = clip.speed;
-      gain.gain.value = clip.muted ? 0 : clip.volume;
       const seekTarget = Math.min(clip.trimIn, Math.max(0, video.duration - 0.01));
       if (Math.abs(video.currentTime - seekTarget) > 0.01) {
         const seeked = waitFor("seeked", video);
@@ -181,6 +185,10 @@ async function renderWebM(
       drawFrame(context, canvas, video, project, clip, transcript, clipStart(project, clip.id));
       if (recorder.state === "inactive") recorder.start(250);
       if (recorder.state === "paused") recorder.resume();
+      audioSource = audioContext.createBufferSource();
+      audioSource.buffer = soundtrack.mix;
+      audioSource.connect(audioDestination);
+      audioSource.start(0, clipStart(project, clip.id), clipDuration(clip));
       await video.play();
       await new Promise<void>((resolve) => {
         const draw = () => {
@@ -193,7 +201,9 @@ async function renderWebM(
         requestAnimationFrame(draw);
       });
       video.pause();
-      gain.gain.value = 0;
+      audioSource.stop();
+      audioSource.disconnect();
+      audioSource = undefined;
       if (recorder.state === "recording") recorder.pause();
       completed += clipDuration(clip);
     }
@@ -204,8 +214,8 @@ async function renderWebM(
     video.pause();
     if (recorder.state !== "inactive") recorder.stop();
     for (const track of stream.getTracks()) track.stop();
-    source.disconnect();
-    gain.disconnect();
+    audioSource?.stop();
+    audioSource?.disconnect();
     await audioContext.close();
   }
 }

@@ -10,3 +10,4 @@
 - [x] Voice and video generation jobs with clips, editor and publish handoff.
 - [x] Reel job contract, local service, docs and SQL file (not applied).
 - [x] Apply local talking-head rules in the editor, share preview/export rendering, and verify timing, silence tails, and undo.
+- [x] Correct Font caption timing/case and add browser-only SFX, keyword highlights, optional fisheye and music; verify real-speech WebM frames/audio and exact undo.

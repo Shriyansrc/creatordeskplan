@@ -26,3 +26,10 @@
 .talking-head-editor .style-result ul { padding-left: 20px; }
 .talking-head-editor .tools { flex-wrap: wrap; }
 .talking-head-editor .tools button { min-height: 44px; font-size: 12px; white-space: normal; }
+.talking-head-editor .local-style-controls { display: grid; grid-template-columns: 1fr; gap: 24px; margin: 20px 0; }
+.talking-head-editor .local-style-controls section { min-width: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+.talking-head-editor .local-style-controls p, .talking-head-editor .local-style-controls li { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.talking-head-editor .local-style-controls ul { list-style: disc; padding-left: 20px; }
+.talking-head-editor .local-style-controls input[type="range"] { display: block; width: 100%; min-height: 32px; }
+.talking-head-editor .local-style-controls button, .talking-head-editor .local-style-controls .btn { margin: 4px 8px 8px 0; white-space: normal; min-height: 44px; }
+@media (min-width: 900px) { .talking-head-editor .local-style-controls { grid-template-columns: 1fr 1fr 1fr; } }

@@ -40,6 +40,10 @@ export type CaptionStyle = {
 
 export type TextOverlay = { id: string; text: string; start: number; end: number };
 export type TranscriptWord = { id: string; clipId: string; word: string; start: number; end: number };
+export type SfxKind = "whoosh" | "pop" | "click" | "riser" | "impact" | "cameraFlash" | "magicDust";
+export type SfxEvent = { id: string; kind: SfxKind; time: number; duration: number; reason: string };
+export type FisheyeSettings = { enabled: boolean; strength: number; curvature: number; zoomCompensation: number; edgeDarken: number; lensShine: number; start: number; end: number; grow: boolean };
+export type MusicSettings = { enabled: boolean; kind: "pad" | "file"; assetId?: string; name: string; level: number };
 
 export type EditorProject = {
   clips: EditorClip[];
@@ -48,6 +52,11 @@ export type EditorProject = {
   captionsEnabled: boolean;
   captionStyle: CaptionStyle;
   overlays: TextOverlay[];
+  keywordHighlights?: boolean;
+  sfxEnabled?: boolean;
+  sfx?: SfxEvent[];
+  fisheye?: FisheyeSettings;
+  music?: MusicSettings;
 };
 
 export type PendingEdit = {

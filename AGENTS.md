@@ -34,6 +34,7 @@ use the editor.
 - AI tasks use typed contracts in `src/lib/ai/` and same-origin TanStack server routes; the built-in Lovable AI is the default and an own AI_PROVIDER key overrides it; browser code never reads credentials, because credentials must remain server-only.
 - Browser media editing and export live in `src/lib/editor/` and lazy-load FFmpeg/Whisper only after user action, because the Cloudflare Worker must not bundle or execute browser media engines.
 - Editor preview and export use the same canvas renderer; editor-local operation contracts extend the AI whitelist for local-only edits, because timing and visual effects must agree without changing other AI tasks.
+- Editor captions and soundtracks use pure timeline cues; browser Web Audio prepares the same deterministic voice/SFX/music buffers for playback and export, and local fisheye uses WebGL with a CPU mesh fallback, because effects must never require a server or credits.
 - Session `File`/`Blob` objects use the in-memory editor store while durable planning and edit decisions use the `cd:` storage prefix, because binary media must not be written to localStorage.
 - Generation and retrieval providers (YouTube, voice, video) are reached only through `/api/ai/*` server routes with zod-validated responses, and media jobs are stateless provider-id polling, because Workers keep no job memory between requests.
 - Reel jobs go through the `ReelJobService` interface in `src/lib/reel-jobs/` (local fallback, remote when a backend exists), so syncing can be added without changing callers.

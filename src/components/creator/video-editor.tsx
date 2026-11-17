@@ -11,6 +11,9 @@ import { applyOperations, clipDuration, clipFromAsset, clipStart, createProject,
 import { addSessionClips, getSessionClips, saveSessionExport } from "@/lib/editor/session-store";
 import { transcribeClip } from "@/lib/editor/transcribe";
 import type { ClipAsset, EditorClip, EditorProject, PendingEdit, TranscriptWord } from "@/lib/editor/types";
+import { StyleControls } from "@/lib/editor/style-controls";
+import { lensMode } from "@/lib/editor/fisheye";
+import { prepareSoundtrack, type Soundtrack } from "@/lib/editor/soundtrack";
 import { applyTalkingHeadStyle, NOT_AVAILABLE, type StyleResult } from "@/lib/editor/talking-head";
 import "@/lib/editor/editor.css";
 import { usePersistentState } from "@/lib/use-persistent-state";
@@ -26,6 +29,13 @@ function formatTime(value: number) {
 }
 
 export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared; go: (screen: "publish") => void }) {
+  const [lens, setLens] = useState("");
+  const [audioReady, setAudioReady] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const soundtrackRef = useRef<Soundtrack | null>(null);
+  const seekAudioRef = useRef(false);
+  const audioClipRef = useRef("");
   const styleRunning = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [styleResult, setStyleResult] = useState<Omit<StyleResult, "project"> | null>(null);
@@ -68,6 +78,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     const video = videoRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !video || !context || !activeClip || exporting) return;
+    setLens(lensMode(canvas));
     let stopped = false;
     let frame = 0;
     const render = () => {
@@ -107,11 +118,11 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     if (!video || !activeClip || !location) return;
     video.playbackRate = activeClip.speed;
     video.volume = activeClip.volume;
-    video.muted = activeClip.muted;
+    video.muted = audioReady || activeClip.muted;
     video.currentTime = Math.min(location.sourceTime, Math.max(0, video.duration || location.sourceTime));
     if (playing) void video.play().catch((cause: unknown) => { setPlaying(false); setError(cause instanceof Error ? cause.message : "Playback could not start"); });
     else video.pause();
-  }, [activeClip?.id, activeAsset?.url, playing]);
+  }, [activeClip?.id, activeAsset?.url, playing, audioReady]);
 
   useEffect(() => {
     if (!playing) return;
@@ -132,6 +143,44 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
     frameRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frameRef.current);
   }, [playing, project, pending, playhead]);
+
+  useEffect(() => {
+    soundtrackRef.current = null;
+    setAudioReady(false);
+    audioSourceRef.current?.stop(); audioSourceRef.current = null;
+  }, [project, pending, transcript, assets]);
+
+  useEffect(() => {
+    if (!playing || !audioReady || !soundtrackRef.current || !audioContextRef.current) {
+      audioSourceRef.current?.stop(); audioSourceRef.current = null; audioClipRef.current = "";
+      return;
+    }
+    if (audioClipRef.current === activeClip?.id && !seekAudioRef.current && audioSourceRef.current) return;
+    audioSourceRef.current?.stop();
+    const context = audioContextRef.current;
+    const source = context.createBufferSource();
+    source.buffer = soundtrackRef.current.mix;
+    source.connect(context.destination);
+    if (playhead < source.buffer.duration) source.start(0, playhead);
+    audioSourceRef.current = source;
+    audioClipRef.current = activeClip?.id ?? "";
+    seekAudioRef.current = false;
+  }, [playing, audioReady, activeClip?.id, playhead]);
+
+  useEffect(() => () => { audioSourceRef.current?.stop(); void audioContextRef.current?.close(); }, []);
+
+  const togglePlayback = async () => {
+    if (playing) { setPlaying(false); return; }
+    setBusy("Preparing local audio..."); setError("");
+    try {
+      let context = audioContextRef.current;
+      if (!context) { context = new AudioContext(); audioContextRef.current = context; }
+      await context.resume();
+      if (!soundtrackRef.current) soundtrackRef.current = await prepareSoundtrack(context, view, assets, transcript);
+      setAudioReady(true); setPlaying(true);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Audio preview unavailable."); }
+    finally { setBusy(""); }
+  };
 
   const snapshot = (value: EditorProject) => JSON.parse(JSON.stringify(value)) as EditorProject;
   const remember = () => {
@@ -165,6 +214,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
 
   const seek = (time: number) => {
     const bounded = Math.max(0, Math.min(time, Math.max(0, totalDuration - 0.001)));
+    seekAudioRef.current = true;
     setPlayhead(bounded);
     const found = locateTime(view, bounded);
     if (found && videoRef.current && found.clip.id === activeClip?.id) videoRef.current.currentTime = found.sourceTime;
@@ -304,9 +354,10 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
   };
 
   return <div className="talking-head-editor">
-    <div className="row" style={{ marginBottom: 14, flexWrap: "wrap" }}><div style={{ flex: 1, minWidth: 200 }}><h1 style={{ fontSize: 38 }}>Edit your video</h1><p className="sub">Trim, colour, crop, captions and looks. Changes are reversible. Your source stays safe.</p></div><button className="btn g" onClick={() => setPlaying(!playing)} disabled={!activeClip}>{playing ? "Pause" : "Play preview"}</button><button className="btn" onClick={doExport} disabled={exporting || Boolean(busy) || !project.clips.length}>Save video</button></div>
+    <div className="row" style={{ marginBottom: 14, flexWrap: "wrap" }}><div style={{ flex: 1, minWidth: 200 }}><h1 style={{ fontSize: 38 }}>Edit your video</h1><p className="sub">Trim, colour, crop, captions and looks. Changes are reversible. Your source stays safe.</p></div><button className="btn g" onClick={togglePlayback} disabled={!activeClip}>{playing ? "Pause" : "Play preview"}</button><button className="btn" onClick={doExport} disabled={exporting || Boolean(busy) || !project.clips.length}>Save video</button></div>
     <div className="row" style={{ flexWrap: "wrap", marginBottom: 10 }}><button className="btn s g" onClick={undo} disabled={!history.current.length}>Undo</button><button className="btn s g" onClick={redo} disabled={!future.current.length}>Redo</button><span className="tg r">Basic, runs in your browser</span>{busy && <span className="tg n" role="status">{busy}</span>}</div>
-    {styleResult && <section className="style-result" aria-label="Talking-head style result"><h2>Changed</h2><ul>{styleResult.changed.map((item) => <li key={item}>{item}</li>)}</ul>{styleResult.couldNot.length > 0 && <><h2>Could not apply</h2><ul>{styleResult.couldNot.map((item) => <li key={item}>{item}</li>)}</ul></>}<h2>Not available yet</h2><ul>{NOT_AVAILABLE.map((item) => <li key={item}>{item}</li>)}</ul></section>}
+    {styleResult && <section className="style-result" aria-label="Talking-head style result"><h2>Changed</h2><ul>{styleResult.changed.map((item) => <li key={item}>{item}</li>)}</ul>{styleResult.couldNot.length > 0 && <><h2>Could not apply</h2><ul>{styleResult.couldNot.map((item) => <li key={item}>{item}</li>)}</ul></>}<h2>Available, not applied</h2><ul>{!project.fisheye?.enabled && <li>Fisheye lens effect</li>}{!project.music?.enabled && <li>Background music: local file or synthesised soft pad</li>}</ul><h2>Not available yet</h2><ul>{NOT_AVAILABLE.map((item) => <li key={item}>{item}</li>)}</ul></section>}
+    <StyleControls project={view} transcript={transcript} change={commit} lens={lens} />
     {error && <div className="notice" role="alert">{error}</div>}
     <label className={"dropzone" + (dropOver ? " over" : "")} onDragOver={(event) => { event.preventDefault(); setDropOver(true); }} onDragLeave={() => setDropOver(false)} onDrop={(event) => { event.preventDefault(); setDropOver(false); void takeFiles(Array.from(event.dataTransfer.files)); }} style={{ display: "block", marginTop: 12, padding: "22px 16px", border: "2px dashed #9fb3d6", borderRadius: 16, textAlign: "center", cursor: "pointer", background: dropOver ? "#eaf1ff" : "transparent" }}>
       <b style={{ display: "block", fontSize: 18 }}>Drop your clips here</b>
@@ -329,7 +380,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
             const y = Math.max(-50, Math.min(50, drag.cropY + (event.clientY - drag.y) / 4));
             setProject((current) => applyOperations(current, [{ type: "crop", clipId: selected.id, ratio: current.ratio, x, y }]));
           }} onPointerUp={() => { dragRef.current = null; }}>
-            {activeClip && activeAsset ? <><video className="editor-source" key={activeClip.id} ref={videoRef} src={activeAsset.url} playsInline preload="auto" onClick={() => setPlaying(!playing)} /><canvas className="editor-render" ref={canvasRef} width={DIMENSIONS[view.ratio][0]} height={DIMENSIONS[view.ratio][1]} aria-label="Edited video preview" /></> : <div className="editor-empty"><b>No video yet</b><p>Choose a video to edit.</p></div>}
+            {activeClip && activeAsset ? <><video className="editor-source" key={activeClip.id} ref={videoRef} src={activeAsset.url} playsInline preload="auto" onClick={togglePlayback} /><canvas className="editor-render" ref={canvasRef} width={DIMENSIONS[view.ratio][0]} height={DIMENSIONS[view.ratio][1]} aria-label="Edited video preview" /></> : <div className="editor-empty"><b>No video yet</b><p>Choose a video to edit.</p></div>}
             {st.tool === "Crop" && selected && <span className="crop-handle" aria-label="Drag to reframe" />}
           </div>
           <div className="eratio">{RATIOS.map((ratio) => <button key={ratio} className={"chip" + (view.ratio === ratio ? " on" : "")} onClick={() => commitOperations([{ type: "crop", ratio }])}>{ratio}</button>)}<span className="sp" /><span style={{ fontSize: 12 }}>{formatTime(playhead)} / {formatTime(totalDuration)}</span></div>
@@ -347,7 +398,7 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
         <div className="panel"><div className="lab">{st.tool}</div>
           {st.tool === "Media" && <div><label className="btn g s">Import clips<input type="file" accept="video/*" multiple hidden onChange={(event) => void importFiles(Array.from(event.target.files ?? []))} /></label><p className="note">{project.clips.length} clips on the timeline. Session files stay on this device.</p></div>}
           {st.tool === "Trim" && selected && <div className="stack"><div className="row"><button className="btn s g" onClick={() => activeClip && location && commitOperations([{ type: "split", clipId: activeClip.id, at: location.sourceTime }])}>Split at playhead</button><button className="btn s g" onClick={() => commitOperations([{ type: "delete", clipId: selected.id }])}>Delete clip</button></div><div className="row"><button className="btn s g" disabled={view.clips.indexOf(selected) <= 0} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) - 1 }])}>Move earlier</button><button className="btn s g" disabled={view.clips.indexOf(selected) >= view.clips.length - 1} onClick={() => commitOperations([{ type: "reorder", clipId: selected.id, toIndex: view.clips.indexOf(selected) + 1 }])}>Move later</button></div><label className="lab">Trim in, seconds<input key={`${selected.id}-in-${selected.trimIn}`} className="field" type="number" min={0} max={selected.trimOut - 0.05} step={0.1} defaultValue={selected.trimIn} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: Number(event.target.value), end: selected.trimOut }])} /></label><label className="lab">Trim out, seconds<input key={`${selected.id}-out-${selected.trimOut}`} className="field" type="number" min={selected.trimIn + 0.05} max={selected.sourceDuration} step={0.1} defaultValue={selected.trimOut} onBlur={(event) => commitOperations([{ type: "trim", clipId: selected.id, start: selected.trimIn, end: Number(event.target.value) }])} /></label><label className="lab">Speed: {selected.speed.toFixed(2)}x<input type="range" min={0.25} max={4} step={0.05} value={selected.speed} onChange={(event) => commitOperations([{ type: "speed", clipId: selected.id, value: Number(event.target.value) }])} /></label><button className="btn s g" onClick={previewSilence}>Preview silence removal</button></div>}
-          {st.tool === "Captions" && <div><label className="row"><input type="checkbox" checked={view.captionsEnabled} onChange={(event) => commitOperations([{ type: "captions", enabled: event.target.checked }])} /> Burn-in captions</label><div className="lab" style={{ marginTop: 12 }}>Style</div>{(["owner", "plain"] as const).map((preset) => <button key={preset} className={"chip" + (view.captionStyle.preset === preset ? " on" : "")} onClick={() => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, preset } })); }}>{preset === "owner" ? "Font" : "Plain"}</button>)}<label className="lab">Size {view.captionStyle.size}px<input type="range" min={32} max={92} value={view.captionStyle.size} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, size: Number(event.target.value) } })); }} /></label><label className="lab">Vertical position {view.captionStyle.position}%<input type="range" min={20} max={80} value={view.captionStyle.position} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, position: Number(event.target.value) } })); }} /></label><label className="lab">Caption colour<input className="field" type="color" value={view.captionStyle.color} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, color: event.target.value } })); }} /></label><p className="note">Owner style: one lowercase word, Poppins ExtraBold Italic, cream-white, mid-frame, hard cuts and tight tracking.</p></div>}
+          {st.tool === "Captions" && <div><label className="row"><input type="checkbox" checked={view.captionsEnabled} onChange={(event) => commitOperations([{ type: "captions", enabled: event.target.checked }])} /> Burn-in captions</label><div className="lab" style={{ marginTop: 12 }}>Style</div>{(["owner", "plain"] as const).map((preset) => <button key={preset} className={"chip" + (view.captionStyle.preset === preset ? " on" : "")} onClick={() => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, preset } })); }}>{preset === "owner" ? "Font" : "Plain"}</button>)}<label className="lab">Size {view.captionStyle.size}px<input type="range" min={32} max={92} value={view.captionStyle.size} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, size: Number(event.target.value) } })); }} /></label><label className="lab">Vertical position {view.captionStyle.position}%<input type="range" min={20} max={80} value={view.captionStyle.position} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, position: Number(event.target.value) } })); }} /></label><label className="lab">Caption colour<input className="field" type="color" value={view.captionStyle.color} onChange={(event) => { remember(); setProject((current) => ({ ...current, captionStyle: { ...current.captionStyle, color: event.target.value } })); }} /></label><p className="note">Font: sentence capitals and I, no punctuation, chest-line words, lemon keyword, hard cuts, seven-frame phrase breaks.</p></div>}
           {st.tool === "Crop" && selected && <div><p style={{ fontSize: 14 }}>Drag the frame to reframe. Choose a ratio below the preview.</p><label className="lab">Zoom {selected.crop.zoom.toFixed(2)}x<input type="range" min={1} max={4} step={0.05} value={selected.crop.zoom} onChange={(event) => commitOperations([{ type: "crop", clipId: selected.id, ratio: view.ratio, zoom: Number(event.target.value) }])} /></label><p className="note">Offset X {selected.crop.x.toFixed(0)}, Y {selected.crop.y.toFixed(0)}</p></div>}
           {st.tool === "Colour" && selected && <div>{([["brightness", "Brightness", 0, 200], ["contrast", "Contrast", 0, 200], ["saturation", "Saturation", 0, 200], ["temperature", "Temperature", -100, 100]] as const).map(([key, label, min, max]) => <label className="lab" key={key}>{label}: {selected.color[key]}<input type="range" min={min} max={max} value={selected.color[key]} onChange={(event) => updateColor(key, Number(event.target.value))} /></label>)}</div>}
           {st.tool === "Style" && selected && <div><p style={{ fontSize: 14 }}>Pick a look for this clip. It sets colour in one tap and you can undo it.</p><div className="row" style={{ flexWrap: "wrap" }}>{([["Clean", 100, 105, 100, 0], ["Warm", 105, 105, 110, 30], ["Punchy", 105, 125, 130, 0], ["Soft", 110, 90, 90, 10], ["Cool", 100, 105, 100, -30]] as const).map(([label, brightness, contrast, saturation, temperature]) => <button key={label} className="chip" onClick={() => commitOperations([{ type: "color", clipId: selected.id, brightness, contrast, saturation, temperature }])}>{label}</button>)}</div><p className="note">Caption look is set in Captions.</p></div>}
