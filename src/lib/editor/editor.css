@@ -142,8 +142,8 @@
  .workspace-editor .editor-toolbar button em { font-style:normal; }
  .workspace-editor .editor-toolbar button.on { background:#e4e7e2; color:#222c27; font-weight:600; }
  .workspace-editor .editor-viewer { display:contents; }
- .workspace-editor .estage { grid-area:viewer; background:#e5e6e2; min-width:0; padding:18px 20px 8px; gap:10px; }
- .workspace-editor .editor-phone { border-radius:3px; max-height:calc(100% - 35px); box-shadow:none; }
+ .workspace-editor .estage { grid-area:viewer; background:#e5e6e2; min-width:0; padding:10px 20px 6px; gap:8px; }
+ .workspace-editor .editor-phone { border-radius:3px; max-height:calc(100% - 26px); box-shadow:none; }
  .workspace-editor .eratio { color:#626963; justify-content:flex-end; gap:4px; }
  .workspace-editor .eratio .chip { background:transparent; color:#676e68; border:1px solid transparent; border-radius:4px; padding:3px 6px; min-height:24px; font-size:12px; }
  .workspace-editor .eratio .chip.on { background:#d7dad4; border-color:#c0c7be; color:#26312a; }
