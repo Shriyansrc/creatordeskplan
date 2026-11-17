@@ -1,3 +1,4 @@
+import { generationHeaders } from "@/lib/ai/client";
 import { useEffect, useRef, useState } from "react";
 import { jobStatusSchema, type JobStatus } from "./media-jobs";
 
@@ -25,7 +26,7 @@ export function useMediaJob(kind: "voice" | "video", onMedia: (blob: Blob) => vo
     const started = Date.now();
     setView({ phase: "starting" });
     try {
-      let status = await readStatus(await fetch(`/api/ai/${kind}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) }));
+      let status = await readStatus(await fetch(`/api/ai/${kind}`, { method: "POST", headers: await generationHeaders(), body: JSON.stringify(input) }));
       current.id = status.id;
       while (!current.stop && (status.status === "queued" || status.status === "running")) {
         if (Date.now() - started > MEDIA_TIMEOUT_MS) throw new Error("Timed out after 10 minutes. The provider job may still be running; Retry starts a new billed job.");
@@ -60,4 +61,4 @@ export function useMediaJob(kind: "voice" | "video", onMedia: (blob: Blob) => vo
   };
 
   return { view, run, cancel, busy: view.phase === "starting" || view.phase === "polling" || view.phase === "downloading" };
-}
+          }
