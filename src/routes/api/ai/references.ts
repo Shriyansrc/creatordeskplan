@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/ai/references")({
         catch { return Response.json({ error: "Invalid reference search request" }, { status: 400 }); }
         const platform = input.platform;
         if (!DOMAIN[platform]) {
-          return Response.json({ platform, supported: false, videos: [], note: `${platform === "ig" ? "Instagram" : "X"} cannot be searched automatically from the app: the built-in search returned no ${platform === "ig" ? "Instagram" : "X"} pages in testing.` });
+          return Response.json({ platform, supported: false, videos: [], note: `${platform === "ig" ? "Instagram" : "X"} discovery is unresolved: the route tested returned no ${platform === "ig" ? "Instagram" : "X"} pages in testing.` });
         }
         if (!process.env["LOVABLE_API_KEY"]) return Response.json({ error: "Built-in web search is not available in this app right now." }, { status: 503 });
         const cacheKey = `${platform}|${input.idea.toLowerCase()}|${input.niche.toLowerCase()}`;
