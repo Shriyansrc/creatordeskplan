@@ -13,6 +13,7 @@ export async function handleAIRequest<I, O>(
   if (!providerIsConfigured(settings)) {
     return Response.json({ connected: false, reason: "AI provider not configured" }, { status: 503 });
   }
+  if (!/^Bearer\s+\S+$/i.test(request.headers.get("authorization") ?? "")) return Response.json({ error: "Sign in to use AI generation." }, { status: 401 });
   try {
     const body: unknown = await request.json();
     const input = inputSchema.parse(body);
