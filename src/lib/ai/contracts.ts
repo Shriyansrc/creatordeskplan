@@ -225,7 +225,7 @@ export const editOperationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("captions"),
     enabled: z.boolean(),
-    style: z.enum(["owner", "plain"]).optional(),
+    style: z.enum(["impact", "owner", "plain"]).optional(),
   }),
   z.object({
     type: z.literal("textOverlay"),
