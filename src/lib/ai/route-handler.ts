@@ -1,3 +1,4 @@
+import { guardGeneration } from "@/lib/references/quota.server";
 import type { ZodType } from "zod";
 import { generateValidated, providerIsConfigured, type ProviderSettings } from "./provider";
 import type { AITask } from "./contracts";
@@ -15,6 +16,8 @@ export async function handleAIRequest<I, O>(
   try {
     const body: unknown = await request.json();
     const input = inputSchema.parse(body);
+    const denied = await guardGeneration(request);
+    if (denied) return denied;
     const data = await generateValidated(settings, task, input, outputSchema);
     return Response.json({ connected: true, data });
   } catch (error) {
