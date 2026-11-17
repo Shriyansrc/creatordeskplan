@@ -302,6 +302,8 @@ export function VideoEditor({ st, set, go }: { st: StudioShared; set: SetShared;
       if (!clip) return boundary;
       const word = transcript.find((item) => item.clipId === clip.originId && item.start + 0.02 < boundary && boundary < item.end - 0.02);
       if (!word) return boundary;
+      // An end time the model did not give (inferred) must never decide where audio is cut.
+      if (keepAfter && word.endInferred) return boundary;
       return keepAfter ? word.end + 0.01 : Math.max(0, word.start - 0.01);
     };
     return operations.map((operation) => {
