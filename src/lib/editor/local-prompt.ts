@@ -16,7 +16,7 @@ export function parseLocalPrompt(prompt: string, project: EditorProject) {
   if (/cut|remove|strip/.test(text) && /silence|silent|pauses|gaps/.test(text)) {
     operations.push({ type: "removeSilence", threshold: 0.025, minDuration: 0.35, ranges: [] });
   }
-  if (/add|enable|turn on|burn/.test(text) && /caption|subtitle/.test(text)) operations.push({ type: "captions", enabled: true, style: "owner" });
+  if (/add|enable|turn on|burn/.test(text) && /caption|subtitle/.test(text)) operations.push({ type: "captions", enabled: true, style: "impact" });
   if (/remove|disable|turn off/.test(text) && /caption|subtitle/.test(text)) operations.push({ type: "captions", enabled: false });
 
   const ratio = text.match(/(9\s*:\s*16|1\s*:\s*1|4\s*:\s*5|16\s*:\s*9)/)?.[1]?.replace(/\s/g, "") as "9:16" | "1:1" | "4:5" | "16:9" | undefined;
@@ -58,4 +58,4 @@ export function parseLocalPrompt(prompt: string, project: EditorProject) {
 
   if (!operations.length) throw new Error("Basic mode did not recognize that edit. Try cut silences, add captions, crop to 9:16, brighter, darker, more contrast, speed up, mute, split at 2, or remove 1 to 3.");
   return editResponseSchema.parse({ summary: "Basic command preview. Review every change before accepting it.", operations });
-}
+    }
