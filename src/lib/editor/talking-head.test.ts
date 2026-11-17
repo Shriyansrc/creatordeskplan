@@ -97,4 +97,26 @@ describe("talking-head rules", () => {
     const result = applyTalkingHeadStyle(fixture(), early, []);
     expect(result.project.clips[0]?.trimIn).toBe(0);
   });
+
+  it("does not remove an untranscribed clip before the first known word", () => {
+    const project = fixture();
+    const second = { ...clipFromAsset({ sourceId: "second", duration: 8, name: "second.webm" } as ClipAsset), id: "second", originId: "second" };
+    project.clips.push(second);
+    const later = [{ ...words[0] as TranscriptWord, clipId: "second", start: 2, end: 2.5 }];
+    const result = applyTalkingHeadStyle(project, later, []);
+    expect(result.project.clips).toHaveLength(2);
+    expect(result.project.clips[0]?.trimIn).toBe(0);
+    expect(result.project.clips[0]?.trimOut).toBe(8);
+  });
+
+  it("replaces fixed punches and overlapping push-ins with one 1.00 to 1.08 ramp", () => {
+    const project = fixture();
+    const clip = project.clips[0];
+    if (clip) clip.zooms = [{ id: "punch", start: 0, end: 3, scale: 1.2 }];
+    project.pushIns = [{ start: 1, duration: 2, from: 1, to: 1.3 }];
+    const result = applyTalkingHeadStyle(project, words, []);
+    expect(result.project.clips.every((item) => item.zooms.length === 0)).toBe(true);
+    expect(result.project.pushIns).toEqual([{ start: 0, duration: 2.5, from: 1, to: 1.08 }]);
+    expect(timelineZoom(result.project, 6)).toBe(1.08);
+  });
 });

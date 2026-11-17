@@ -60,7 +60,9 @@ export function applyTalkingHeadStyle(original: EditorProject, transcript: Trans
   const timedWords = transcript.filter((word) => Number.isFinite(word.start) && Number.isFinite(word.end) && word.end > word.start);
   const first = timedWords.map((word) => ({ word, time: wordTimelineTime(project, word) }))
     .filter((item): item is { word: TranscriptWord; time: number } => item.time !== null).sort((a, b) => a.time - b.time)[0];
-  if (first && first.time > 1) {
+  const unverifiedLead = first && project.clips.some((clip) => clipStart(project, clip.id) < first.time &&
+    !timedWords.some((word) => (word.clipId === clip.originId || word.clipId === clip.id) && word.end > clip.trimIn && word.start < clip.trimOut));
+  if (first && first.time > 1 && !unverifiedLead) {
     const cutoff = first.time - 0.5;
     const ranges = project.clips.flatMap((clip) => {
       const start = clipStart(project, clip.id);
@@ -69,7 +71,8 @@ export function applyTalkingHeadStyle(original: EditorProject, transcript: Trans
     });
     project = applyOperations(project, [{ type: "removeSilence", ranges }]);
     changed.push(`Hook lead-in shortened by ${cutoff.toFixed(2)} seconds. First spoken word now starts at 0.50 seconds.`);
-  } else if (first) changed.push(`Hook lead-in unchanged. First spoken word starts at ${first.time.toFixed(2)} seconds.`);
+  } else if (first && unverifiedLead) couldNot.push("Hook trim skipped: earlier clips have no word timestamps, so their speech cannot safely be removed.");
+  else if (first) changed.push(`Hook lead-in unchanged. First spoken word starts at ${first.time.toFixed(2)} seconds.`);
   else couldNot.push("Hook trim skipped: no word timestamps on the current timeline. Transcribe locally first.");
 
   // Splitting lead-in changes segment ids. Map the detected ranges to surviving segments.
@@ -86,7 +89,12 @@ export function applyTalkingHeadStyle(original: EditorProject, transcript: Trans
 
   project = applyOperations(project, [editOperationSchema.parse({ type: "pushIn", start: 0, duration: 2.5, from: 1, to: 1.08 }), { type: "captions", enabled: true, style: "owner" }, { type: "color", brightness: 100, contrast: 108, saturation: 92, temperature: 0 }]);
   project.captionStyle = { preset: "owner", size: 58, color: "#F4F1EA", position: 60 };
-  project.clips = project.clips.map((clip) => ({ ...clip, color: { ...clip.color, navyShadows: 0.06, vignette: 0.25 } }));
+  const punches = project.clips.reduce((count, clip) => count + clip.zooms.length, 0);
+  const existingPushes = project.pushIns?.length ?? 0;
+  project.pushIns = [{ start: 0, duration: 2.5, from: 1, to: 1.08 }];
+  project.clips = project.clips.map((clip) => ({ ...clip, zooms: [], color: { ...clip.color, navyShadows: 0.06, vignette: 0.25 } }));
+  if (punches) changed.push(`Removed ${punches} fixed zoom punch(es) so they do not interrupt the slow push-in.`);
+  if (existingPushes > 1) changed.push("Replaced overlapping push-ins with one opening ramp.");
   changed.push("Opening push-in: eased 1.00 to 1.08 over 2.50 seconds, then held.");
   changed.push("Font caption style set: lowercase Poppins ExtraBold Italic, cream-white, soft shadow, no box or outline, tight tracking, centered at 60% height. Word timestamps drive hard cuts and a 3-frame scale-in.");
   if (!first) couldNot.push("Captions cannot appear until a timestamped transcript is available.");
