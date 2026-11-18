@@ -58,6 +58,8 @@ describe("reference security", () => {
   });
   it("cache hits still authenticate, but do not reserve or infer again", async () => {
     const { deps, handler } = setup();
+    deps.discover.mockResolvedValue([{ url: "https://www.youtube.com/watch?v=abcdefghijk", title: "Exam revision tips", evidence: "search" }]);
+    deps.verify.mockImplementation(async (h) => ({ ...h, author: "a", thumbnail: null, views: null, likes: null, verified: "platform", note: "" }));
     await handler(request("valid"));
     const cached = await handler(request("valid"));
     expect((await cached.json()).cached).toBe(true);
@@ -67,14 +69,39 @@ describe("reference security", () => {
     expect((await handler(request("invalid"))).status).toBe(401);
     expect((await handler(request())).status).toBe(401);
   });
-  it("gateway has one tool call, 1024 tokens, and zero retries", async () => {
+  it("empty searches are never cached", async () => {
+    const { deps, handler } = setup();
+    await handler(request("valid"));
+    const again = await (await handler(request("valid"))).json();
+    expect(again.cached).toBeUndefined();
+    expect(deps.discover).toHaveBeenCalledTimes(2);
+  });
+  it("search service errors are 502 and not cached", async () => {
+    const { deps, handler } = setup();
+    deps.discover.mockRejectedValueOnce(new Error("down"));
+    const r = await handler(request("valid"));
+    expect(r.status).toBe(502);
+    await handler(request("valid"));
+    expect(deps.discover).toHaveBeenCalledTimes(2);
+  });
+  it("Search again skips the cache but still reserves quota", async () => {
+    const { deps, handler } = setup();
+    deps.discover.mockResolvedValue([{ url: "https://www.youtube.com/watch?v=abcdefghijk", title: "x", evidence: "search" }]);
+    deps.verify.mockImplementation(async (h) => ({ ...h, author: "", thumbnail: null, views: null, likes: null, verified: "platform", note: "" }));
+    await handler(request("valid"));
+    const fresh = await (await handler(request("valid", { fresh: true }))).json();
+    expect(fresh.cached).toBeUndefined();
+    expect(deps.reserve).toHaveBeenCalledTimes(2);
+    expect(deps.discover).toHaveBeenCalledTimes(2);
+  });
+  it("gateway is bounded: 3 search steps, 3000 tokens, zero retries", async () => {
     mocks.gateway.mockResolvedValue({ output: [] });
     await discoverReferences("yt", "exam revision", "");
-    expect(mocks.gateway).toHaveBeenCalledWith(expect.objectContaining({ max_tool_calls: 1, max_output_tokens: 1024, parallel_tool_calls: false }), { maxRetries: 0, retryWaitBudgetMs: 0 });
+    expect(mocks.gateway).toHaveBeenCalledWith(expect.objectContaining({ max_tool_calls: 3, max_output_tokens: 3000, parallel_tool_calls: false }), { maxRetries: 0, retryWaitBudgetMs: 0 });
   });
-  it("IG and X remain unresolved without inference", async () => {
+  it("X stays unsupported without inference", async () => {
     const { deps, handler } = setup();
-    for (const platform of ["ig", "x"]) expect((await (await handler(request("valid", { platform }))).json()).supported).toBe(false);
+    expect((await (await handler(request("valid", { platform: "x" }))).json()).supported).toBe(false);
     expect(deps.reserve).not.toHaveBeenCalled();
     expect(deps.discover).not.toHaveBeenCalled();
   });

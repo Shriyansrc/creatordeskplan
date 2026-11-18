@@ -39,6 +39,8 @@ import { Route as ApiAiStyleRouteImport } from './routes/api/ai/style'
 import { Route as ApiAiTopicsRouteImport } from './routes/api/ai/topics'
 import { Route as ApiAiVideoRouteImport } from './routes/api/ai/video'
 import { Route as ApiAiVoiceRouteImport } from './routes/api/ai/voice'
+import { Route as ApiReelJobsIndexRouteImport } from './routes/api/reel-jobs/index'
+import { Route as ApiReelJobsSplatRouteImport } from './routes/api/reel-jobs/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -190,6 +192,16 @@ const ApiAiVoiceRoute = ApiAiVoiceRouteImport.update({
   path: '/api/ai/voice',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiReelJobsIndexRoute = ApiReelJobsIndexRouteImport.update({
+  id: '/api/reel-jobs/',
+  path: '/api/reel-jobs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiReelJobsSplatRoute = ApiReelJobsSplatRouteImport.update({
+  id: '/api/reel-jobs/$',
+  path: '/api/reel-jobs/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -222,6 +234,8 @@ export interface FileRoutesByFullPath {
   '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
+  '/api/reel-jobs/$': typeof ApiReelJobsSplatRoute
+  '/api/reel-jobs/': typeof ApiReelJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -253,6 +267,8 @@ export interface FileRoutesByTo {
   '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
+  '/api/reel-jobs/$': typeof ApiReelJobsSplatRoute
+  '/api/reel-jobs': typeof ApiReelJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -286,6 +302,8 @@ export interface FileRoutesById {
   '/api/ai/topics': typeof ApiAiTopicsRoute
   '/api/ai/video': typeof ApiAiVideoRoute
   '/api/ai/voice': typeof ApiAiVoiceRoute
+  '/api/reel-jobs/$': typeof ApiReelJobsSplatRoute
+  '/api/reel-jobs/': typeof ApiReelJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -320,6 +338,8 @@ export interface FileRouteTypes {
     | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
+    | '/api/reel-jobs/$'
+    | '/api/reel-jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -351,6 +371,8 @@ export interface FileRouteTypes {
     | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
+    | '/api/reel-jobs/$'
+    | '/api/reel-jobs'
   id:
     | '__root__'
     | '/'
@@ -383,6 +405,8 @@ export interface FileRouteTypes {
     | '/api/ai/topics'
     | '/api/ai/video'
     | '/api/ai/voice'
+    | '/api/reel-jobs/$'
+    | '/api/reel-jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -408,6 +432,8 @@ export interface RootRouteChildren {
   ApiAiTopicsRoute: typeof ApiAiTopicsRoute
   ApiAiVideoRoute: typeof ApiAiVideoRoute
   ApiAiVoiceRoute: typeof ApiAiVoiceRoute
+  ApiReelJobsSplatRoute: typeof ApiReelJobsSplatRoute
+  ApiReelJobsIndexRoute: typeof ApiReelJobsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -622,6 +648,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiVoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/reel-jobs/': {
+      id: '/api/reel-jobs/'
+      path: '/api/reel-jobs'
+      fullPath: '/api/reel-jobs/'
+      preLoaderRoute: typeof ApiReelJobsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/reel-jobs/$': {
+      id: '/api/reel-jobs/$'
+      path: '/api/reel-jobs/$'
+      fullPath: '/api/reel-jobs/$'
+      preLoaderRoute: typeof ApiReelJobsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -672,6 +712,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiTopicsRoute: ApiAiTopicsRoute,
   ApiAiVideoRoute: ApiAiVideoRoute,
   ApiAiVoiceRoute: ApiAiVoiceRoute,
+  ApiReelJobsSplatRoute: ApiReelJobsSplatRoute,
+  ApiReelJobsIndexRoute: ApiReelJobsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -8,33 +8,68 @@ const inputSchema = z.object({
   idea: z.string().trim().min(2).max(200),
   niche: z.string().trim().max(200).default(""),
   platform: z.enum(["yt", "ig", "li", "x"]),
+  fresh: z.boolean().default(false),
 });
 type SearchInput = z.infer<typeof inputSchema>;
-type Link = { url: string; title: string };
-const DOMAIN: Partial<Record<WebPlatform, string>> = { yt: "youtube.com", li: "linkedin.com" };
-const WHAT: Record<WebPlatform, string> = { yt: "short videos on YouTube", ig: "Instagram reels (links must be instagram.com/reel/ pages)", li: "LinkedIn video posts", x: "X posts with video" };
-const CACHE_TTL = 6 * 3600_000;
+/** evidence "search": the web search tool listed or cited the page. "text": only the model's answer text named it. */
+export type Link = { url: string; title: string; evidence: "search" | "text" };
+const SUPPORTED: WebPlatform[] = ["yt", "ig", "li"];
+const WHAT: Record<WebPlatform, string> = {
+  yt: "individual YouTube videos (youtube.com/watch or youtube.com/shorts pages)",
+  ig: "individual Instagram reels (instagram.com/reel/ or instagram.com/p/ pages)",
+  li: "individual LinkedIn video posts (linkedin.com/posts/ or linkedin.com/feed/update/ pages)",
+  x: "X posts with video",
+};
+const WORD: Record<WebPlatform, string> = { yt: "youtube video", ig: "instagram reel", li: "linkedin video post", x: "x video" };
+const CACHE_TTL = 30 * 60_000;
+
+const linkSchema = z.object({ url: z.string().optional(), title: z.string().optional() }).passthrough();
+const responseSchema = z.object({ output: z.array(z.object({
+  type: z.string().optional(),
+  action: z.object({ sources: z.array(linkSchema).optional() }).passthrough().optional(),
+  content: z.array(z.object({ text: z.string().optional(), annotations: z.array(linkSchema).optional() }).passthrough()).optional(),
+}).passthrough()).optional() }).passthrough();
+
+/** Pull links from a real web search response. Never builds or guesses URLs. */
+export function extractLinks(raw: unknown): Link[] {
+  const res = responseSchema.parse(raw);
+  const out: Link[] = [];
+  const seen = new Set<string>();
+  const add = (url: string, title: string, evidence: Link["evidence"]) => {
+    const key = url.replace(/[).,;\]]+$/, "");
+    const prior = out.find((l) => l.url === key);
+    if (prior) { if (evidence === "search") prior.evidence = "search"; if (!prior.title && title) prior.title = title; return; }
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ url: key, title, evidence });
+  };
+  for (const item of res.output ?? []) {
+    for (const s of item.action?.sources ?? []) if (s.url) add(s.url, s.title ?? "", "search");
+    for (const c of item.content ?? []) {
+      for (const a of c.annotations ?? []) if (a.url) add(a.url, a.title ?? "", "search");
+      for (const m of (c.text ?? "").matchAll(/https?:\/\/[^\s<>"'\])]+/g)) add(m[0], "", "text");
+    }
+  }
+  return out;
+}
 
 export async function discoverReferences(platform: WebPlatform, idea: string, niche: string): Promise<Link[]> {
-  const domain = DOMAIN[platform];
-  // Instagram has no domain filter: the filtered search returned no Instagram pages. Links are still kept only if they classify as instagram.com/reel pages.
-  if (!domain && platform !== "ig") return [];
+  if (!SUPPORTED.includes(platform)) return [];
   const res = await generateResponse({
     model: "openai/gpt-6.1-terra",
-    input: `Search the web for real, public ${WHAT[platform]} that a creator could copy the format of. Idea: ${idea}.${niche ? ` Topic area: ${niche}.` : ""} Search the way a viewer would: use the exact phrases people type for this topic plus one or two close variants. Prefer videos whose title clearly matches the idea, that are popular on the page, and that are recent. Skip compilations, ads, news, channels, playlists and search pages. Only individual video or post pages that you actually found. Never guess or build a link. Return at most eight links, concisely.`,
-    tools: [{ type: "web_search", ...(domain ? { filters: { allowed_domains: [domain] } } : {}), search_context_size: "low" }],
-    max_tool_calls: 1,
-    max_output_tokens: 1024,
+    input: `Search the web for ${WHAT[platform]} that match this idea: "${idea}".${niche ? ` Topic area: ${niche}.` : ""}
+Turn the idea into 2 or 3 short plain search queries that keep its meaning, and add "${WORD[platform]}" to each. Do not use the site: operator.
+Reply with only the matching page links you actually saw in the search results, one per line, followed by the title. Skip profiles, channels, playlists, articles and search pages. Never guess or build a link. At most ten links.`,
+    tools: [{ type: "web_search", search_context_size: "medium" }],
+    include: ["web_search_call.action.sources"],
+    max_tool_calls: 3,
+    max_output_tokens: 3000,
+    reasoning: { effort: "low" },
     parallel_tool_calls: false,
   }, { maxRetries: 0, retryWaitBudgetMs: 0 });
-  const output = z.object({ output: z.array(z.object({
-    content: z.array(z.object({
-      annotations: z.array(z.object({ url: z.string().optional(), title: z.string().optional() }).passthrough()).optional(),
-    }).passthrough()).optional(),
-  }).passthrough()).optional() }).parse(res);
-  return (output.output ?? []).flatMap((item) => (item.content ?? []).flatMap((content) =>
-    (content.annotations ?? []).flatMap((a) => a.url ? [{ url: a.url, title: a.title ?? "" }] : [])));
+  return extractLinks(res);
 }
+
 
 type Dependencies = {
   authenticate: (token: string) => Promise<VerifiedSession>;
@@ -58,39 +93,59 @@ export function createReferenceHandler(deps: Dependencies) {
     try { input = inputSchema.parse(await request.json()); }
     catch { return Response.json({ error: "Invalid reference search request" }, { status: 400 }); }
     const platform = input.platform;
-    if (!DOMAIN[platform] && platform !== "ig") return Response.json({ platform, supported: false, videos: [], note: "X discovery is unresolved: the route tested returned no X pages in testing." });
+    if (!SUPPORTED.includes(platform)) return Response.json({ platform, supported: false, status: "empty", videos: [], unverified: [], note: "X discovery is not supported yet." });
     const cacheKey = `${platform}|${input.idea.toLowerCase()}|${input.niche.toLowerCase()}`;
     const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.at < CACHE_TTL) return Response.json({ ...cached.body, cached: true });
+    if (!input.fresh && cached && Date.now() - cached.at < CACHE_TTL) return Response.json({ ...cached.body, cached: true });
     try {
       if (!await deps.reserve(session.userId)) return Response.json({ error: "Reference search limit reached. Try again later." }, { status: 429 });
     } catch {
       return Response.json({ error: "Reference search quota is unavailable. No search was run." }, { status: 503 });
     }
-    try {
-      const found = await deps.discover(platform, input.idea, input.niche);
-      const seen = new Set<string>();
-      const candidates: { url: string; id: string; title: string }[] = [];
-      for (const f of found) {
-        const c = classify(f.url);
-        if (!c || c.platform !== platform || seen.has(c.url)) continue;
-        seen.add(c.url);
-        candidates.push({ url: c.url, id: c.id, title: f.title });
-      }
-      const checked = await Promise.all(candidates.slice(0, 8).map((c) => deps.verify({ platform, ...c, snippet: "", engine: "web search" })));
-      const ideaTerms = terms(`${input.idea} ${input.niche}`);
-      const videos = checked.filter((v): v is WebVideo => !!v).map((v) => {
-        const matched = ideaTerms.filter((w) => v.title.toLowerCase().includes(w));
-        return { ...v, why: matched.length ? `Title mentions: ${matched.join(", ")}.` : "Found by web search for your idea; the title does not repeat your words.", score: matched.length };
-      }).sort((a, b) => b.score - a.score || (b.views ?? 0) - (a.views ?? 0));
-      const body = { platform, supported: true, videos, searched: candidates.length, note: videos.length ? "" : "The search returned no pages that could be confirmed on the platform." };
+    let found: Link[];
+    try { found = await deps.discover(platform, input.idea, input.niche); }
+    catch { cache.delete(cacheKey); return Response.json({ status: "error", error: "The web search service failed. Nothing was saved and no automatic retry was made." }, { status: 502 }); }
+    const body = await buildResults(platform, `${input.idea} ${input.niche}`, found, deps.verify);
+    if (body.videos.length || body.unverified.length) {
       cache.set(cacheKey, { at: Date.now(), body });
       if (cache.size > 200) cache.clear();
-      return Response.json(body);
-    } catch {
-      return Response.json({ error: "Reference search failed. No automatic retry was made." }, { status: 502 });
-    }
+    } else cache.delete(cacheKey);
+    return Response.json(body);
   };
+}
+
+type Result = WebVideo & { why: string; score: number };
+export async function buildResults(platform: WebPlatform, idea: string, found: Link[], check: typeof verify) {
+  const seen = new Set<string>();
+  const candidates: { url: string; id: string; title: string; evidence: Link["evidence"] }[] = [];
+  for (const f of found) {
+    const c = classify(f.url);
+    if (!c || c.platform !== platform || seen.has(c.url)) continue;
+    seen.add(c.url);
+    candidates.push({ url: c.url, id: c.id, title: f.title, evidence: f.evidence });
+  }
+  const list = candidates.slice(0, 10);
+  const checked = await Promise.all(list.map((c) => check({ platform, url: c.url, id: c.id, title: c.title, snippet: "", engine: "web search" })));
+  const ideaTerms = terms(idea);
+  const confirmed: Result[] = [];
+  const unverified: Result[] = [];
+  checked.forEach((v, i) => {
+    if (!v) return;
+    // Links named only in the answer text, with no search evidence, are shown only when the platform confirms them.
+    if (list[i]!.evidence === "text" && v.verified !== "platform") return;
+    const title = v.title || list[i]!.title;
+    const matched = ideaTerms.filter((w) => title.toLowerCase().includes(w));
+    const r = { ...v, title: title || "Untitled (no title from search)", why: matched.length ? `Title mentions: ${matched.join(", ")}.` : "Found by web search for your idea; the title does not repeat your words.", score: matched.length };
+    (v.verified === "platform" ? confirmed : unverified).push(r);
+  });
+  const byRelevance = (a: Result, b: Result) => b.score - a.score;
+  confirmed.sort(byRelevance);
+  unverified.sort(byRelevance);
+  const status = confirmed.length ? "ok" : unverified.length ? "unverified" : "empty";
+  const note = status === "empty"
+    ? candidates.length ? "Search found pages, but the platform says they no longer exist." : "The search worked but found no matching video pages for this idea."
+    : status === "unverified" ? "Search found links, but the platform blocked the check, so none is confirmed as a video." : "";
+  return { platform, supported: true, status, videos: confirmed, unverified, searched: candidates.length, note };
 }
 
 export const handleReferenceSearch = createReferenceHandler({

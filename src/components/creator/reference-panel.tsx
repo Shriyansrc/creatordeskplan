@@ -9,8 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { GoogleButton } from "./google-button";
 
 type Found = WebVideo & { why?: string };
-type Section = { loading: boolean; error: string; supported: boolean; note: string; videos: Found[]; cached: boolean; done: boolean };
-const EMPTY: Section = { loading: false, error: "", supported: true, note: "", videos: [], cached: false, done: false };
+type Section = { loading: boolean; error: string; supported: boolean; note: string; videos: Found[]; unverified: Found[]; cached: boolean; done: boolean };
+const EMPTY: Section = { loading: false, error: "", supported: true, note: "", videos: [], unverified: [], cached: false, done: false };
 const NAMES: Record<WebPlatform, string> = { yt: "YouTube", ig: "Instagram", li: "LinkedIn", x: "X" };
 const SITE: Record<WebPlatform, string> = { yt: "youtube.com", ig: "instagram.com/reel", li: "linkedin.com/posts", x: "x.com" };
 
@@ -28,7 +28,7 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
   const niche = nicheLabel(st);
   const busy = platforms.some((p) => sections[p]?.loading);
 
-  const run = async (platform: WebPlatform) => {
+  const run = async (platform: WebPlatform, fresh = false) => {
     setSections((s) => ({ ...s, [platform]: { ...EMPTY, loading: true } }));
     try {
       const { data, error } = await supabase.auth.getSession();
@@ -41,18 +41,19 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
       const response = await fetch("/api/ai/references", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-        body: JSON.stringify({ idea, niche, platform }),
+        body: JSON.stringify({ idea, niche, platform, fresh }),
       });
-      const body = (await response.json()) as { error?: string; supported?: boolean; note?: string; videos?: Found[]; cached?: boolean };
+      const body = (await response.json()) as { error?: string; supported?: boolean; note?: string; videos?: Found[]; unverified?: Found[]; cached?: boolean };
       if (response.status === 401) setNeedsSignIn(true);
       if (!response.ok || body.error) throw new Error(body.error ?? `Search failed with HTTP ${response.status}`);
-      setSections((s) => ({ ...s, [platform]: { loading: false, error: "", supported: body.supported !== false, note: body.note ?? "", videos: body.videos ?? [], cached: !!body.cached, done: true } }));
+      setSections((s) => ({ ...s, [platform]: { loading: false, error: "", supported: body.supported !== false, note: body.note ?? "", videos: body.videos ?? [], unverified: body.unverified ?? [], cached: !!body.cached, done: true } }));
     } catch (cause) {
       setSections((s) => ({ ...s, [platform]: { ...EMPTY, done: true, error: cause instanceof Error ? cause.message : "Search failed" } }));
     }
   };
   const runAll = async () => {
-    for (const p of platforms) await run(p);
+    const fresh = platforms.some((p) => sections[p]?.done);
+    for (const p of platforms) await run(p, fresh);
   };
   const toggle = (v: Found) => setSaved(saved.some((x) => x.url === v.url) ? saved.filter((x) => x.url !== v.url) : [...saved, v]);
 
@@ -66,7 +67,7 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
       <label className="lab" htmlFor="ref-idea">Your idea</label>
       <input id="ref-idea" className="field" value={idea} onChange={(event) => setIdea(event.target.value)} />
       <p className="note" style={{ margin: "10px 0" }}>
-        Searches the selected platforms: {platforms.map((p) => NAMES[p]).join(", ")}. No key or pasted links. Instagram results are found by web search and may show as a link without a thumbnail. LinkedIn video playback is not verified. X discovery is unresolved. Results are not ranked by performance.
+        Searches the selected platforms: {platforms.map((p) => NAMES[p]).join(", ")}. No key or pasted links. Links the platform blocks us from checking are listed separately as found in search, video not verified. X is not supported yet. Results are sorted by how well they match your idea, not by performance.
       </p>
       <button className="btn" disabled={busy || idea.trim().length < 2} onClick={() => void runAll()}>
         {busy ? "Searching…" : platforms.some((p) => sections[p]?.done) ? "Search again" : "Find references"}
@@ -86,19 +87,29 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
             {sec.loading && <p className="note">Searching {NAMES[p]}…</p>}
             {sec.error && (
               <div className="notice" role="alert">
-                {sec.error} <button className="btn s g" onClick={() => void run(p)} disabled={sec.loading}>Retry</button>
+                {sec.error} <button className="btn s g" onClick={() => void run(p, true)} disabled={sec.loading}>Search again</button>
               </div>
             )}
             {sec.done && !sec.error && !sec.supported && <p className="note">{sec.note}</p>}
-            {sec.done && !sec.error && sec.supported && !sec.videos.length && <p className="note">{sec.note || `No ${NAMES[p]} results for this idea.`}</p>}
+            {sec.done && !sec.error && sec.supported && sec.note && <p className="note">{sec.note}</p>}
             <div className="stack">
               {sec.videos.map((v) => (
                 <RefCard key={v.url} v={v} saved={saved.some((x) => x.url === v.url)} onSave={() => toggle(v)} />
               ))}
             </div>
+            {sec.unverified.length > 0 && (
+              <>
+                <div className="lab" style={{ marginTop: 10 }}>Found in search, video not verified</div>
+                <div className="stack">
+                  {sec.unverified.map((v) => (
+                    <RefCard key={v.url} v={v} saved={saved.some((x) => x.url === v.url)} onSave={() => toggle(v)} />
+                  ))}
+                </div>
+              </>
+            )}
             {sec.done && !sec.loading && (
               <p className="note" style={{ marginTop: 8 }}>
-                <a href={google} target="_blank" rel="noreferrer">Open Google results for {NAMES[p]} on this idea</a> (opens in your browser).
+                Optional: <a href={google} target="_blank" rel="noreferrer">look on Google yourself</a>. These are not counted as found videos.
               </p>
             )}
           </div>
@@ -119,7 +130,8 @@ export function ReferencePanel({ st, pains }: { st: StudioShared; pains: string[
 }
 
 function RefCard({ v, saved, onSave }: { v: Found; saved: boolean; onSave: () => void }) {
-  const label = v.platform === "yt" ? "video" : "post (video not verified)";
+  const ok = v.verified === "platform";
+  const label = ok ? "video" : "link";
   return (
     <div className="card row" style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
       <a href={v.url} target="_blank" rel="noreferrer" aria-label={`Open this ${label} on ${NAMES[v.platform]}`}>
@@ -132,10 +144,12 @@ function RefCard({ v, saved, onSave }: { v: Found; saved: boolean; onSave: () =>
       <div style={{ flex: 1, minWidth: 0 }}>
         <a href={v.url} target="_blank" rel="noreferrer"><b>{v.title}</b></a>
         <div style={{ fontSize: 13 }}>
-          {[v.author, v.views !== null ? `${v.views.toLocaleString()} views` : "views not available", v.likes !== null ? `${v.likes.toLocaleString()} likes` : ""].filter(Boolean).join(" · ")}
+          {[NAMES[v.platform], v.author || "creator unknown", v.views !== null ? `${v.views.toLocaleString()} views` : "views unknown", v.likes !== null ? `${v.likes.toLocaleString()} likes` : "likes unknown", "date unknown"].join(" · ")}
         </div>
-        <div className="note">{v.platform !== "yt" ? "Post only. Video playback not verified. " : ""}{v.why ?? v.note}</div>
+        <div className="note">{ok ? "Confirmed video. " : "Found in search, video not verified. "}{v.why ?? v.note}</div>
+        <div className="note" style={{ wordBreak: "break-all" }}>{v.url}</div>
       </div>
+      <a className="btn s" href={v.url} target="_blank" rel="noreferrer">Open video</a>
       <button className="btn s g" onClick={onSave} aria-pressed={saved}>{saved ? "Remove from plan" : "Save to plan"}</button>
     </div>
   );

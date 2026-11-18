@@ -177,39 +177,54 @@ const parseCount = (s: string): number | null => {
   return Number.isFinite(n) ? Math.round(n * mult) : null;
 };
 
-/** Check a hit against the platform itself. Only platform-confirmed fields are filled in. */
+const unverified = (hit: WebHit, why: string): WebVideo => ({ platform: hit.platform, url: hit.url, engine: hit.engine, title: hit.title, author: "", thumbnail: null, views: null, likes: null, verified: "search-only", note: `Found in search, video not verified. ${why}` });
+const NAME: Record<WebPlatform, string> = { yt: "YouTube", ig: "Instagram", li: "LinkedIn", x: "X" };
+
+/**
+ * Check a hit against the platform itself. Only platform-confirmed fields are filled in.
+ * Returns null only when the platform positively says the page does not exist (404/400/401 from oEmbed).
+ * A blocked or failed check keeps the link as "search-only" instead of erasing a genuine search result.
+ */
 export async function verify(hit: WebHit): Promise<WebVideo | null> {
   const base = { platform: hit.platform, url: hit.url, engine: hit.engine };
   try {
     if (hit.platform === "yt") {
       const r = await getText(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(hit.url)}`, {}, 6000);
-      if (r.status !== 200) return null;
+      if (r.status === 404 || r.status === 400 || r.status === 401) return null;
+      if (r.status !== 200) return unverified(hit, `YouTube did not answer the check (HTTP ${r.status}).`);
       const j = JSON.parse(r.text) as Record<string, unknown>;
-      if (typeof j["title"] !== "string") return null;
+      if (typeof j["title"] !== "string") return unverified(hit, "YouTube returned no title.");
       let views: number | null = null;
       try {
         const w = await getText(hit.url, { headers: { cookie: "CONSENT=YES+1; SOCS=CAI" } }, 6000);
         const m = w.text.match(/"viewCount":"(\d+)"/) ?? w.text.match(/itemprop="interactionCount"\s+content="(\d+)"/);
         if (w.status === 200 && m) views = Number(m[1]);
       } catch { /* views stay unknown */ }
-      return { ...base, title: j["title"], author: String(j["author_name"] ?? ""), thumbnail: `https://i.ytimg.com/vi/${hit.id}/hqdefault.jpg`, views, likes: null, verified: "platform", note: views === null ? "Exists on YouTube. View count could not be read." : "Exists on YouTube. View count read from the video page." };
+      return { ...base, title: j["title"], author: String(j["author_name"] ?? ""), thumbnail: `https://i.ytimg.com/vi/${hit.id}/hqdefault.jpg`, views, likes: null, verified: "platform", note: views === null ? "Confirmed on YouTube. View count could not be read." : "Confirmed on YouTube. View count read from the video page." };
     }
     if (hit.platform === "x") {
       const r = await getText(`https://publish.twitter.com/oembed?omit_script=1&url=${encodeURIComponent(hit.url)}`, {}, 6000);
-      if (r.status !== 200) return null;
+      if (r.status === 404) return null;
+      if (r.status !== 200) return unverified(hit, `X did not answer the check (HTTP ${r.status}).`);
       const j = JSON.parse(r.text) as Record<string, unknown>;
       const text = strip(String(j["html"] ?? "")).replace(/\s*[\u2014-]\s*\S.*$/, "");
-      return { ...base, title: (text || hit.title).slice(0, 200), author: String(j["author_name"] ?? ""), thumbnail: null, views: null, likes: null, verified: "platform", note: "Post exists on X. X gives no thumbnail or numbers without an account." };
+      return { ...base, title: (text || hit.title).slice(0, 200), author: String(j["author_name"] ?? ""), thumbnail: null, views: null, likes: null, verified: "search-only", note: "Post exists on X, but X does not say whether it contains a video." };
     }
     if (hit.platform === "ig" || hit.platform === "li") {
       const r = await getText(hit.url, { headers: { "user-agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)" } }, 6000);
-      if (r.status !== 200) return { ...base, title: hit.title, author: "", thumbnail: null, views: null, likes: null, verified: "search-only", note: `Found by search. ${hit.platform === "ig" ? "Instagram" : "LinkedIn"} would not confirm it from a server (HTTP ${r.status}), so it is shown as a link only.` };
+      if (r.status !== 200) return unverified(hit, `${NAME[hit.platform]} blocked the server check (HTTP ${r.status}).`);
       const og = (p: string) => { const m = r.text.match(new RegExp(`<meta[^>]+property="og:${p}"[^>]+content="([^"]*)"`, "i")) ?? r.text.match(new RegExp(`<meta[^>]+content="([^"]*)"[^>]+property="og:${p}"`, "i")); return m ? entities(m[1]!) : ""; };
       const desc = og("description");
       const likes = /([\d.,]+[KMB]?)\s+likes?/i.exec(desc);
-      return { ...base, title: (og("title") || hit.title).slice(0, 200), author: "", thumbnail: og("image") || null, views: null, likes: likes ? parseCount(likes[1]!) : null, verified: og("title") || og("image") ? "platform" : "search-only", note: "Details read from the post page." };
+      const hasVideo = !!og("video") || !!og("video:url") || /video/i.test(og("type")) || /"@type"\s*:\s*"VideoObject"/.test(r.text);
+      const title = (og("title") || hit.title).slice(0, 200);
+      const author = hit.platform === "li" ? (/^(.+?) on LinkedIn/i.exec(og("title"))?.[1] ?? "") : "";
+      if (!hasVideo) return { ...unverified(hit, `The ${NAME[hit.platform]} page opened but did not show a video.`), title, author, thumbnail: og("image") || null };
+      return { ...base, title, author, thumbnail: og("image") || null, views: null, likes: likes ? parseCount(likes[1]!) : null, verified: "platform", note: `Video confirmed on the ${NAME[hit.platform]} page.` };
     }
-  } catch { /* fall through */ }
+  } catch {
+    return unverified(hit, `The ${NAME[hit.platform]} check failed or timed out.`);
+  }
   return null;
 }
 
