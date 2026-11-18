@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Spinner } from "@/desk/ui";
 import { getDesk, patchDesk, useDesk } from "@/desk/store";
+import { appendReferenceDraft, draftTopicId, draftLabel } from "@/desk/reference-drafts";
 import type { ScriptReference } from "@/lib/reference-analysis/contracts";
 import { errorText, runPlan, runResearch, runScript } from "@/desk/api";
 import type { Platform, PlanTopic } from "@/lib/ai/contracts";
@@ -11,7 +12,7 @@ import type { StyleResult } from "@/lib/ai/contracts";
 import { ReferencePanel } from "@/components/creator/reference-panel";
 import type { StudioShared } from "@/lib/creator-shared";
 
-export const Route = createFileRoute("/desk/plan")({ component: Plan });
+export const Route = createFileRoute("/desk/plan")({ component: Plan, head: () => ({ meta: [{ title: "Plan and scripts | Creator Desk" }, { name: "description", content: "Plan your topics and keep original and reference-inspired script drafts in Creator Desk." }, { property: "og:title", content: "Plan and scripts | Creator Desk" }, { property: "og:description", content: "Plan topics and keep your script drafts." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }) });
 
 const PNAME: Record<Platform, string> = { ig: "Instagram", yt: "YouTube", li: "LinkedIn", x: "X" };
 const TABS = ["Research", "30-day plan", "Script"] as const;
@@ -79,13 +80,12 @@ function Plan() {
     const r = await runScript({ depth: scriptDepth, topic: topic.title, niche, goal: goalWithPurpose, platform: topic.platform, ...(p.contentTypes.length ? { contentTypes: p.contentTypes } : {}), ...(topic.format ? { format: topic.format } : {}), painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), ...(instruction && script ? { current: { hook: script.data.hook, problem: script.data.problem, solution: script.data.solution, cta: script.data.cta }, instruction } : {}) });
     patchDesk({ scripts: { ...d.scripts, [topic.id]: { data: r, at: new Date().toISOString() } } });
   });
-  const refKey = topic ? `${topic.id}@ref` : "";
-  const refScript = refKey ? d.scripts[refKey] : undefined;
+  const refDrafts = topic ? Object.entries(d.scripts).filter(([k, v]) => draftTopicId(k) === topic.id && (v.reference || k.includes("@ref"))) : [];
   // Reference-based drafts are kept beside the main draft and never overwrite it.
   const doRefScript = (reference: ScriptReference) => run("refscript", async () => {
     if (!topic) return;
     const r = await runScript({ depth: scriptDepth, topic: topic.title, niche, goal: goalWithPurpose, platform: topic.platform, ...(p.contentTypes.length ? { contentTypes: p.contentTypes } : {}), ...(topic.format ? { format: topic.format } : {}), painPoint: topic.painPoint, ...(p.language ? { language: p.language } : {}), searchPhrases: (research?.audience.searches ?? []).slice(0, 20).map((x) => x.phrase), audience: [p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480), researchKeywords: (research?.keywords ?? []).slice(0, 20).map((k) => k.keyword), ...(styleNotesOf(myStyle) ? { styleNotes: styleNotesOf(myStyle) as string } : {}), reference });
-    patchDesk({ scripts: { ...getDesk().scripts, [`${topic.id}@ref`]: { data: r, at: new Date().toISOString(), reference } } });
+    patchDesk({ scripts: appendReferenceDraft(getDesk().scripts, topic.id, topic.title, r, reference) });
   });
 
   return (
@@ -199,13 +199,14 @@ function Plan() {
             <h2 style={{ margin: "28px 0 6px" }}>Analyse a reference</h2>
             <ReferenceAnalysis topic={topic.title} niche={niche} goal={goalWithPurpose} audience={[p.audience, p.audienceNotes].filter(Boolean).join(" | ").slice(0, 480)} language={p.language} scriptBusy={busy !== ""} onScript={(ref) => void doRefScript(ref)} />
             {busy === "refscript" && <p role="status"><Spinner /> Writing a script from the reference pattern…</p>}
-            {refScript && (
-              <div className="dk-item" style={{ marginTop: 10 }}>
+            {refDrafts.map(([refKey, refScript]) => (
+              <div key={refKey} className="dk-item" style={{ marginTop: 10 }}>
+                <div className="dk-label">{draftLabel(refKey, d.scripts, plan?.topics)}</div>
                 <span className="dk-tag est">SCRIPT FROM A REFERENCE PATTERN. EDIT IT.</span>
                 <p style={{ fontSize: 14, overflowWrap: "anywhere", margin: "6px 0" }}>Pattern from: {refScript.reference?.source ?? "a reference"}. Your main draft above is unchanged.</p>
                 <p style={{ whiteSpace: "pre-wrap" }}>{[refScript.data.hook, refScript.data.problem, refScript.data.solution, refScript.data.cta].filter(Boolean).join("\n\n")}</p>
               </div>
-            )}
+            ))}
             <h2 style={{ margin: "28px 0 6px" }}>Reference videos</h2>
             <p style={{ marginBottom: 12 }}>Real videos found by web search for this topic. Confirmed videos come first; links a platform would not let us check are marked as not verified. X is not supported yet.</p>
             <ReferencePanel st={{ topic: topic.title, goal: p.goal, niche: 99, day: topic.day } as unknown as StudioShared} pains={p.painPoints.map((x) => [x])} />

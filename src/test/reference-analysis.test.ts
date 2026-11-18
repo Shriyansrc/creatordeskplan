@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@lovable.dev/ai-gateway", () => ({ generateChatCompletion: vi.fn() }));
 import { createAnalysisHandler, parseObserved } from "@/lib/reference-analysis/analyse.server";
-import { performanceWarning, platformOfLink, toScriptReference, type Observed, type ReferenceAnalysisResult } from "@/lib/reference-analysis/contracts";
+import { MAX_UPLOAD_BYTES, performanceWarning, platformOfLink, toScriptReference, type Observed, type ReferenceAnalysisResult } from "@/lib/reference-analysis/contracts";
 import { scriptInputSchema } from "@/lib/ai/contracts";
 
 const observed: Observed = {
@@ -39,7 +39,7 @@ describe("reference analysis", () => {
   it("file-only input is sent inline as a data URL and labelled as an upload", async () => {
     const { deps, handler } = setup();
     const body = await (await handler(req({ file: mp4() }))).json();
-    expect(deps.watch.mock.calls[0]![0].dataUrl.startsWith("data:video/mp4;base64,")).toBe(true);
+    expect(deps.watch.mock.calls[0]?.[0].dataUrl.startsWith("data:video/mp4;base64,")).toBe(true);
     expect(body.provenance.kind).toBe("upload");
     expect(body.metrics.views.value).toBeNull();
   });
@@ -48,6 +48,14 @@ describe("reference analysis", () => {
     expect((await handler(req({ topic: "x" }))).status).toBe(400);
     expect((await handler(req({ file: new File(["hello world!"], "a.mp4", { type: "video/mp4" }) }))).status).toBe(415);
     expect((await handler(req({ file: new File(["x"], "a.gif", { type: "image/gif" }) }))).status).toBe(415);
+    expect(deps.reserve).not.toHaveBeenCalled();
+    expect(deps.watch).not.toHaveBeenCalled();
+  });
+  it("uploads over 15 MB stop before quota and inference", async () => {
+    const { deps, handler } = setup();
+    const file = new File([new Uint8Array(MAX_UPLOAD_BYTES + 1)], "large.mp4", { type: "video/mp4" });
+    expect((await handler(req({ file }))).status).toBe(413);
+    expect(MAX_UPLOAD_BYTES).toBe(15 * 1024 * 1024);
     expect(deps.reserve).not.toHaveBeenCalled();
     expect(deps.watch).not.toHaveBeenCalled();
   });
@@ -73,13 +81,16 @@ describe("reference analysis", () => {
     const body = await (await handler(req({ link: "https://www.instagram.com/reel/ABCDE12/" }))).json();
     expect(body.status).toBe("needs_upload");
     expect(deps.reserve).not.toHaveBeenCalled();
+    expect(deps.watch).not.toHaveBeenCalled();
   });
   it("silent clips are labelled video-only, and unseen video is an honest error", async () => {
     const { deps, handler } = setup();
     deps.watch.mockResolvedValueOnce({ observed: { ...observed, speechHeard: false, spokenPoints: [] }, audioTokens: 0, videoTokens: 500 });
     expect((await (await handler(req({ file: mp4() }))).json()).mode).toBe("video-only");
     deps.watch.mockResolvedValueOnce({ observed: { ...observed, canSee: false }, audioTokens: 0, videoTokens: 0 });
-    expect((await handler(req({ file: mp4() }))).status).toBe(502);
+    const result = await handler(req({ file: mp4() }));
+    expect(result.status).toBe(502);
+    expect((await result.json()).status).not.toBe("analysed");
   });
   it("a malformed AI answer is a 502 with no retry", async () => {
     const { deps, handler } = setup();

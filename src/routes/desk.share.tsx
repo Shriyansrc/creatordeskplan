@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PlatLogo } from "@/desk/ui";
 import { PLATFORM_COPY, useDesk } from "@/desk/store";
+import { draftLabel } from "@/desk/reference-drafts";
 import { getSessionExport } from "@/lib/editor/session-store";
 import type { Platform } from "@/lib/ai/contracts";
 
-export const Route = createFileRoute("/desk/share")({ component: Share });
+export const Route = createFileRoute("/desk/share")({ component: Share, head: () => ({ meta: [{ title: "Share your video | Creator Desk" }, { name: "description", content: "Choose a saved script caption and manually share your exported video with Creator Desk." }, { property: "og:title", content: "Share your video | Creator Desk" }, { property: "og:description", content: "Choose a caption and share your video yourself." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }) });
 
 const UPLOAD: Record<Platform, string> = { ig: "https://www.instagram.com/", yt: "https://studio.youtube.com/", li: "https://www.linkedin.com/feed/", x: "https://x.com/compose/post" };
 
@@ -31,7 +32,7 @@ function Share() {
           {Object.keys(d.scripts).length === 0 ? <p>Write a script in your plan to get a caption.</p> : (
             <>
               <select className="dk-field" value={id} onChange={(e) => setId(e.target.value)} aria-label="Choose a script" style={{ marginBottom: 12 }}>
-                {Object.keys(d.scripts).map((k) => <option key={k} value={k}>{(d.plan?.data.topics.find((t) => t.id === k.replace(/@ref$/, ""))?.title ?? k.replace(/@ref$/, "")) + (k.endsWith("@ref") ? " (from reference)" : "")}</option>)}
+                {Object.keys(d.scripts).map((k) => <option key={k} value={k}>{draftLabel(k, d.scripts, d.plan?.data.topics)}</option>)}
               </select>
               <textarea className="dk-field" rows={6} readOnly value={caption} />
               <button type="button" className="dk-btn secondary" style={{ marginTop: 10 }} onClick={() => void copy(caption, "cap")}>{copied === "cap" ? "Copied" : "Copy caption"}</button>

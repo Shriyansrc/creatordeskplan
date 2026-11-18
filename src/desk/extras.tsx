@@ -1,10 +1,10 @@
 import { generationHeaders } from "@/lib/ai/client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getDesk } from "@/desk/store";
 import { applyRemote, fetchRemote, lastSyncedAt, pushLocal, type Remote } from "@/desk/sync";
 import { Spinner } from "@/desk/ui";
 import { errorText, learnStyle } from "@/desk/api";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_SECONDS, UPLOAD_MIME, toScriptReference, type Metric, type NeedsUpload, type ReferenceAnalysisResult, type ScriptReference } from "@/lib/reference-analysis/contracts";
+import { MAX_UPLOAD_BYTES, UPLOAD_MIME, toScriptReference, type Metric, type NeedsUpload, type ReferenceAnalysisResult, type ScriptReference } from "@/lib/reference-analysis/contracts";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import type { StyleResult } from "@/lib/ai/contracts";
 
@@ -58,17 +58,6 @@ export function StylePanel() {
 type RefOutcome = ReferenceAnalysisResult | NeedsUpload;
 type SavedIdea = { title: string; angle: string; from: string; at: string };
 
-function videoSeconds(file: File): Promise<number | null> {
-  return new Promise((resolve) => {
-    const v = document.createElement("video");
-    const url = URL.createObjectURL(file);
-    v.preload = "metadata";
-    v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(Number.isFinite(v.duration) ? v.duration : null); };
-    v.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-    v.src = url;
-  });
-}
-
 const metricText = (label: string, m: Metric) => m.value === null ? `${label}: unknown (${m.source})` : `${label}: ${m.value.toLocaleString()} (${m.source}, read ${new Date(m.fetchedAt).toLocaleString()})`;
 
 export function ReferenceAnalysis({ topic, niche, goal = "", audience = "", language = "", onScript, scriptBusy = false }: { topic: string; niche: string; goal?: string; audience?: string; language?: string; onScript?: (ref: ScriptReference) => void; scriptBusy?: boolean }) {
@@ -76,16 +65,18 @@ export function ReferenceAnalysis({ topic, niche, goal = "", audience = "", lang
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [res, setRes] = usePersistentState<RefOutcome | null>("ref-analysis2", null);
+  const [res, setRes] = useState<RefOutcome | null>(null);
+  const requestVersion = useRef(0);
+  const clearInputResult = () => { requestVersion.current += 1; setRes(null); setErr(""); };
   const [savedIdeas, setSavedIdeas] = usePersistentState<SavedIdea[]>("ref-ideas", []);
   const run = async () => {
     if (busy) return;
+    const version = ++requestVersion.current;
+    setRes(null);
     setErr("");
     if (file) {
       if (!(UPLOAD_MIME as readonly string[]).includes(file.type)) return setErr("That file type is not supported. Use an MP4, MOV or WebM video.");
       if (file.size > MAX_UPLOAD_BYTES) return setErr("That video is larger than 15 MB. Trim it or export a smaller copy.");
-      const secs = await videoSeconds(file);
-      if (secs !== null && secs > MAX_UPLOAD_SECONDS) return setErr("That video is longer than 3 minutes. Trim it to the part you want to learn from.");
     }
     setBusy(true);
     try {
@@ -97,9 +88,9 @@ export function ReferenceAnalysis({ topic, niche, goal = "", audience = "", lang
       const r = await fetch("/api/ai/reference-video", { method: "POST", headers, body: fd });
       const body = (await r.json().catch(() => ({}))) as RefOutcome & { error?: string };
       if (!r.ok || body.error) throw new Error(body.error ?? `Analysis failed with HTTP ${r.status}`);
-      setRes(body);
+      if (version === requestVersion.current) setRes(body);
     } catch (e) {
-      setErr(errorText(e));
+      if (version === requestVersion.current) { setRes(null); setErr(errorText(e)); }
     }
     setBusy(false);
   };
@@ -108,9 +99,9 @@ export function ReferenceAnalysis({ topic, niche, goal = "", audience = "", lang
   return (
     <div className="dk-list" style={{ marginTop: 8, gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0 }}>
       <span className="dk-tag est" style={{ justifySelf: "start" }}>AI WATCHES THE VIDEO</span>
-      <p>Paste one public YouTube video link, or upload a clip (MP4, MOV or WebM, up to 15 MB and 3 minutes). The AI watches and listens to it. Instagram, LinkedIn and X do not let apps read their videos, so for those, upload the file. The clip is sent once for analysis and is not stored.</p>
-      <label className="dk-item"><div className="dk-label">Video link</div><input className="dk-field" value={link} disabled={!!file} placeholder="https://www.youtube.com/watch?v=..." onChange={(e) => setLink(e.target.value)} /></label>
-      <label className="dk-item"><div className="dk-label">Or upload a video file</div><input type="file" style={{ maxWidth: "100%" }} accept="video/mp4,video/quicktime,video/webm" aria-label="Upload a video file" onChange={(e) => { setFile(e.target.files?.[0] ?? null); }} />{file && <button type="button" className="dk-chip" onClick={() => setFile(null)}>Use a link instead</button>}</label>
+      <p>Paste one public YouTube video link, or upload an MP4, MOV or WebM video up to 15 MB. There is no enforced duration limit; the AI provider may reject longer videos. This configured flow cannot read Instagram, LinkedIn or X videos from links; upload the video instead. Creator Desk does not save uploads. They are sent to the AI provider for analysis; AI-provider retention has not been verified.</p>
+      <label className="dk-item"><div className="dk-label">Video link</div><input className="dk-field" value={link} disabled={!!file} placeholder="https://www.youtube.com/watch?v=..." onChange={(e) => { clearInputResult(); setLink(e.target.value); }} /></label>
+      <label className="dk-item"><div className="dk-label">Or upload a video file</div><input type="file" style={{ maxWidth: "100%" }} accept="video/mp4,video/quicktime,video/webm" aria-label="Upload a video file" onChange={(e) => { clearInputResult(); setFile(e.target.files?.[0] ?? null); }} />{file && <button type="button" className="dk-chip" onClick={() => { clearInputResult(); setFile(null); }}>Use a link instead</button>}</label>
       <button type="button" className="dk-btn" disabled={busy || (!file && !link.trim())} onClick={() => void run()}>{busy ? <Spinner /> : null}Analyse</button>
       {err && <p className="dk-err" role="alert">{err}</p>}
       {res?.status === "needs_upload" && <p className="dk-err" role="status">{res.reason}</p>}

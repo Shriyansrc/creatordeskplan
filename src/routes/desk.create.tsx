@@ -1,16 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { patchDesk, useDesk } from "@/desk/store";
+import { draftLabel, draftTopicId } from "@/desk/reference-drafts";
 import { addSessionClips } from "@/lib/editor/session-store";
 
-export const Route = createFileRoute("/desk/create")({ component: Create });
+export const Route = createFileRoute("/desk/create")({ component: Create, head: () => ({ meta: [{ title: "Create a video | Creator Desk" }, { name: "description", content: "Choose a saved script draft and record or upload your video in Creator Desk." }, { property: "og:title", content: "Create a video | Creator Desk" }, { property: "og:description", content: "Choose a script and create your video." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }) });
 
 function Create() {
   const d = useDesk();
   const nav = useNavigate();
   const plan = d.plan?.data;
   const [id, setId] = useState(Object.keys(d.scripts)[0] ?? "");
-  const topic = plan?.topics.find((t) => t.id === id);
+  const topic = plan?.topics.find((t) => t.id === draftTopicId(id));
   const sc = d.scripts[id]?.data;
   const vid = useRef<HTMLVideoElement>(null);
   const rec = useRef<MediaRecorder | null>(null);
@@ -68,7 +69,7 @@ function Create() {
           ) : (
             <>
               <select className="dk-field" value={id} onChange={(e) => setId(e.target.value)} aria-label="Choose a script" style={{ marginBottom: 12 }}>
-                {Object.keys(d.scripts).map((k) => <option key={k} value={k}>{(plan?.topics.find((t) => t.id === k.replace(/@ref$/, ""))?.title ?? k.replace(/@ref$/, "")) + (k.endsWith("@ref") ? " (from reference)" : "")}</option>)}
+                {Object.keys(d.scripts).map((k) => <option key={k} value={k}>{draftLabel(k, d.scripts, plan?.topics)}</option>)}
               </select>
               {sc && (
                 <>

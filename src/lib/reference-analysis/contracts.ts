@@ -2,7 +2,6 @@ import { z } from "zod";
 
 /** Browser-safe contracts for automatic reference-video analysis. */
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
-export const MAX_UPLOAD_SECONDS = 180;
 export const UPLOAD_MIME = ["video/mp4", "video/quicktime", "video/webm"] as const;
 
 export const contextSchema = z.object({

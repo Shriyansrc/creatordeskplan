@@ -1,5 +1,7 @@
 # Creator Desk connection pass
 
+- [x] Narrow reference-analysis corrections, regression/replay checks and prior real evidence recovery; no inference or publication. Evidence and limitations in docs/reference-analysis-corrections.md; unrelated existing reel-job fixture failure remains.
+
 - [x] Add typed AI contracts, provider adapter, six task routes, and status route.
 - [x] Connect platforms, audience, research, 30-day plan, scripts, and captions with honest states and cd: persistence.
 - [x] Share session clips and exports between Clips, Editor, and Publish.

@@ -105,7 +105,7 @@ export function createAnalysisHandler(deps: Deps) {
       if (!c) return json({ error: "That link is not a single video page. Paste the link of one video, not a profile, channel or playlist." }, 400);
       provenance = { kind: "link", platform, url: c.url, fileName: null, title: null, creator: null };
       if (platform !== "yt") {
-        const body: NeedsUpload = { status: "needs_upload", platform, provenance, reason: `${NAME[platform]} does not let apps read its videos without signing in, so the video could not be watched from the link. Download or screen-record it and upload the file instead. Nothing was charged.` };
+        const body: NeedsUpload = { status: "needs_upload", platform, provenance, reason: `This configured flow cannot read ${NAME[platform]} videos from links. Upload a video file you have permission to use instead. No AI request was made.` };
         return json(body);
       }
       yt = { url: `https://www.youtube.com/watch?v=${c.id}`, id: c.id };
@@ -121,7 +121,7 @@ export function createAnalysisHandler(deps: Deps) {
     try { watched = await deps.watch(media, ctx); }
     catch (e) {
       const name = e instanceof Error ? e.name : "";
-      if (name === "ZodError" || (e instanceof Error && e.message === "no json") || e instanceof SyntaxError) return json({ error: "The AI watched the video but its answer was not in the expected shape. One request was used; nothing was retried. Try again." }, 502);
+      if (name === "ZodError" || (e instanceof Error && e.message === "no json") || e instanceof SyntaxError) return json({ error: "The AI returned an invalid analysis. We cannot confirm what video or audio it read. One request was attempted; nothing was retried." }, 502);
       const status = (e as { httpStatus?: number }).httpStatus;
       return json({ error: status === 400 || status === 422 ? "The AI service would not accept this video (it may be private, age-restricted or too long). Try uploading the file instead." : "The AI video service failed. Nothing was retried automatically." }, 502);
     }
@@ -131,7 +131,7 @@ export function createAnalysisHandler(deps: Deps) {
     if (details) { provenance.title = details.title; provenance.creator = details.author || null; }
     const metrics: Metrics = {
       views: yt ? (details?.views != null ? { value: details.views, source: "YouTube video page", fetchedAt: now } : unknownMetric("YouTube video page (not readable)")) : unknownMetric("not available for uploaded files"),
-      likes: unknownMetric(yt ? "YouTube does not show likes to apps without a key" : "not available for uploaded files"),
+      likes: unknownMetric(yt ? "not read by this configured flow" : "not available for uploaded files"),
       comments: unknownMetric(yt ? "not read" : "not available for uploaded files"),
       published: { value: null, source: "not read" },
     };
