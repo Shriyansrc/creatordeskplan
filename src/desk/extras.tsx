@@ -106,11 +106,11 @@ export function ReferenceAnalysis({ topic, niche, goal = "", audience = "", lang
   const r = res?.status === "analysed" ? res : null;
   const src = r ? (r.provenance.url ?? `Uploaded file ${r.provenance.fileName ?? ""}`) : "";
   return (
-    <div className="dk-list" style={{ marginTop: 8 }}>
-      <span className="dk-tag est">AI WATCHES THE VIDEO</span>
+    <div className="dk-list" style={{ marginTop: 8, gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0 }}>
+      <span className="dk-tag est" style={{ justifySelf: "start" }}>AI WATCHES THE VIDEO</span>
       <p>Paste one public YouTube video link, or upload a clip (MP4, MOV or WebM, up to 15 MB and 3 minutes). The AI watches and listens to it. Instagram, LinkedIn and X do not let apps read their videos, so for those, upload the file. The clip is sent once for analysis and is not stored.</p>
       <label className="dk-item"><div className="dk-label">Video link</div><input className="dk-field" value={link} disabled={!!file} placeholder="https://www.youtube.com/watch?v=..." onChange={(e) => setLink(e.target.value)} /></label>
-      <label className="dk-item"><div className="dk-label">Or upload a video file</div><input type="file" accept="video/mp4,video/quicktime,video/webm" aria-label="Upload a video file" onChange={(e) => { setFile(e.target.files?.[0] ?? null); }} />{file && <button type="button" className="dk-chip" onClick={() => setFile(null)}>Use a link instead</button>}</label>
+      <label className="dk-item"><div className="dk-label">Or upload a video file</div><input type="file" style={{ maxWidth: "100%" }} accept="video/mp4,video/quicktime,video/webm" aria-label="Upload a video file" onChange={(e) => { setFile(e.target.files?.[0] ?? null); }} />{file && <button type="button" className="dk-chip" onClick={() => setFile(null)}>Use a link instead</button>}</label>
       <button type="button" className="dk-btn" disabled={busy || (!file && !link.trim())} onClick={() => void run()}>{busy ? <Spinner /> : null}Analyse</button>
       {err && <p className="dk-err" role="alert">{err}</p>}
       {res?.status === "needs_upload" && <p className="dk-err" role="status">{res.reason}</p>}
