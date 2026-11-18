@@ -30,6 +30,7 @@ import { Route as ApiAiNichesRouteImport } from './routes/api/ai/niches'
 import { Route as ApiAiPlanRouteImport } from './routes/api/ai/plan'
 import { Route as ApiAiPlatformsRouteImport } from './routes/api/ai/platforms'
 import { Route as ApiAiReferenceRouteImport } from './routes/api/ai/reference'
+import { Route as ApiAiReferenceVideoRouteImport } from './routes/api/ai/reference-video'
 import { Route as ApiAiReferencesRouteImport } from './routes/api/ai/references'
 import { Route as ApiAiResearchRouteImport } from './routes/api/ai/research'
 import { Route as ApiAiScriptRouteImport } from './routes/api/ai/script'
@@ -147,6 +148,11 @@ const ApiAiReferenceRoute = ApiAiReferenceRouteImport.update({
   path: '/api/ai/reference',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiReferenceVideoRoute = ApiAiReferenceVideoRouteImport.update({
+  id: '/api/ai/reference-video',
+  path: '/api/ai/reference-video',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAiReferencesRoute = ApiAiReferencesRouteImport.update({
   id: '/api/ai/references',
   path: '/api/ai/references',
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
   '/api/ai/reference': typeof ApiAiReferenceRoute
+  '/api/ai/reference-video': typeof ApiAiReferenceVideoRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
   '/api/ai/reference': typeof ApiAiReferenceRoute
+  '/api/ai/reference-video': typeof ApiAiReferenceVideoRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/api/ai/plan': typeof ApiAiPlanRoute
   '/api/ai/platforms': typeof ApiAiPlatformsRoute
   '/api/ai/reference': typeof ApiAiReferenceRoute
+  '/api/ai/reference-video': typeof ApiAiReferenceVideoRoute
   '/api/ai/references': typeof ApiAiReferencesRoute
   '/api/ai/research': typeof ApiAiResearchRoute
   '/api/ai/script': typeof ApiAiScriptRoute
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/api/ai/plan'
     | '/api/ai/platforms'
     | '/api/ai/reference'
+    | '/api/ai/reference-video'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/api/ai/plan'
     | '/api/ai/platforms'
     | '/api/ai/reference'
+    | '/api/ai/reference-video'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/api/ai/plan'
     | '/api/ai/platforms'
     | '/api/ai/reference'
+    | '/api/ai/reference-video'
     | '/api/ai/references'
     | '/api/ai/research'
     | '/api/ai/script'
@@ -423,6 +435,7 @@ export interface RootRouteChildren {
   ApiAiPlanRoute: typeof ApiAiPlanRoute
   ApiAiPlatformsRoute: typeof ApiAiPlatformsRoute
   ApiAiReferenceRoute: typeof ApiAiReferenceRoute
+  ApiAiReferenceVideoRoute: typeof ApiAiReferenceVideoRoute
   ApiAiReferencesRoute: typeof ApiAiReferencesRoute
   ApiAiResearchRoute: typeof ApiAiResearchRoute
   ApiAiScriptRoute: typeof ApiAiScriptRoute
@@ -585,6 +598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiReferenceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/reference-video': {
+      id: '/api/ai/reference-video'
+      path: '/api/ai/reference-video'
+      fullPath: '/api/ai/reference-video'
+      preLoaderRoute: typeof ApiAiReferenceVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ai/references': {
       id: '/api/ai/references'
       path: '/api/ai/references'
@@ -703,6 +723,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiPlanRoute: ApiAiPlanRoute,
   ApiAiPlatformsRoute: ApiAiPlatformsRoute,
   ApiAiReferenceRoute: ApiAiReferenceRoute,
+  ApiAiReferenceVideoRoute: ApiAiReferenceVideoRoute,
   ApiAiReferencesRoute: ApiAiReferencesRoute,
   ApiAiResearchRoute: ApiAiResearchRoute,
   ApiAiScriptRoute: ApiAiScriptRoute,

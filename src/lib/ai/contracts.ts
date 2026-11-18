@@ -1,3 +1,4 @@
+import { scriptReferenceSchema } from "@/lib/reference-analysis/contracts";
 import { z } from "zod";
 
 export const platformSchema = z.enum(["ig", "yt", "li", "x"]);
@@ -111,6 +112,7 @@ export const scriptInputSchema = z.object({
   searchPhrases: z.array(z.string().max(200)).max(25).optional(),
   audience: z.string().max(500).optional(),
   contentTypes: z.array(z.string().max(100)).max(10).optional(),
+  reference: scriptReferenceSchema.optional(),
 });
 export type ScriptInput = z.infer<typeof scriptInputSchema>;
 

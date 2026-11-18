@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { ScriptReference } from "@/lib/reference-analysis/contracts";
 import type { AudienceResult, NichesResult, Platform, PlanResult, ResearchResult, ScriptResult } from "@/lib/ai/contracts";
 
 export type Profile = {
@@ -26,7 +27,7 @@ export type DeskState = {
   pickedNiches: { title: string; fit: string }[];
   research: { key: string; data: ResearchResult; at: string } | null;
   plan: { key: string; data: PlanResult; at: string; startDate?: string } | null;
-  scripts: Record<string, { data: ScriptResult; at: string }>;
+  scripts: Record<string, { data: ScriptResult; at: string; reference?: ScriptReference }>;
   results: { id: string; title: string; platform: Platform; views: number; saves: number; shares: number; at: string }[];
 };
 

@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { getDesk } from "@/desk/store";
 import { applyRemote, fetchRemote, lastSyncedAt, pushLocal, type Remote } from "@/desk/sync";
 import { Spinner } from "@/desk/ui";
-import { analyseReference, errorText, learnStyle } from "@/desk/api";
+import { errorText, learnStyle } from "@/desk/api";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_SECONDS, UPLOAD_MIME, toScriptReference, type Metric, type NeedsUpload, type ReferenceAnalysisResult, type ScriptReference } from "@/lib/reference-analysis/contracts";
 import { usePersistentState } from "@/lib/use-persistent-state";
-import type { ReferenceResult, StyleResult } from "@/lib/ai/contracts";
+import type { StyleResult } from "@/lib/ai/contracts";
 
 export function styleNotesOf(s: StyleResult | null): string | undefined {
   if (!s) return undefined;
@@ -54,69 +55,96 @@ export function StylePanel() {
   );
 }
 
-export function ReferenceAnalysis({ topic, niche }: { topic: string; niche: string }) {
-  const [platform, setPlatform] = useState<"yt" | "ig" | "x">("ig");
+type RefOutcome = ReferenceAnalysisResult | NeedsUpload;
+type SavedIdea = { title: string; angle: string; from: string; at: string };
+
+function videoSeconds(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    v.preload = "metadata";
+    v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(Number.isFinite(v.duration) ? v.duration : null); };
+    v.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    v.src = url;
+  });
+}
+
+const metricText = (label: string, m: Metric) => m.value === null ? `${label}: unknown (${m.source})` : `${label}: ${m.value.toLocaleString()} (${m.source}, read ${new Date(m.fetchedAt).toLocaleString()})`;
+
+export function ReferenceAnalysis({ topic, niche, goal = "", audience = "", language = "", onScript, scriptBusy = false }: { topic: string; niche: string; goal?: string; audience?: string; language?: string; onScript?: (ref: ScriptReference) => void; scriptBusy?: boolean }) {
   const [link, setLink] = useState("");
-  const [views, setViews] = useState("");
-  const [likes, setLikes] = useState("");
-  const [pasted, setPasted] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [res, setRes] = usePersistentState<{ key: string; data: ReferenceResult } | null>("ref-analysis", null);
-  const key = `${platform}|${link}|${pasted.slice(0, 40)}`;
+  const [res, setRes] = usePersistentState<RefOutcome | null>("ref-analysis2", null);
+  const [savedIdeas, setSavedIdeas] = usePersistentState<SavedIdea[]>("ref-ideas", []);
   const run = async () => {
     if (busy) return;
-    setBusy(true);
     setErr("");
+    if (file) {
+      if (!(UPLOAD_MIME as readonly string[]).includes(file.type)) return setErr("That file type is not supported. Use an MP4, MOV or WebM video.");
+      if (file.size > MAX_UPLOAD_BYTES) return setErr("That video is larger than 15 MB. Trim it or export a smaller copy.");
+      const secs = await videoSeconds(file);
+      if (secs !== null && secs > MAX_UPLOAD_SECONDS) return setErr("That video is longer than 3 minutes. Trim it to the part you want to learn from.");
+    }
+    setBusy(true);
     try {
-      const data = await analyseReference({ platform, link, views, likes, pasted, topic, niche });
-      setRes({ key, data });
+      const fd = new FormData();
+      if (file) fd.set("file", file); else fd.set("link", link.trim());
+      Object.entries({ topic, niche, goal, audience, language }).forEach(([k, v]) => fd.set(k, v.slice(0, k === "audience" ? 500 : 300)));
+      const headers = new Headers(await generationHeaders());
+      headers.delete("content-type");
+      const r = await fetch("/api/ai/reference-video", { method: "POST", headers, body: fd });
+      const body = (await r.json().catch(() => ({}))) as RefOutcome & { error?: string };
+      if (!r.ok || body.error) throw new Error(body.error ?? `Analysis failed with HTTP ${r.status}`);
+      setRes(body);
     } catch (e) {
       setErr(errorText(e));
     }
     setBusy(false);
   };
-  const [fetching, setFetching] = useState(false);
-  const [note, setNote] = useState("");
-  const fetchLink = async () => {
-    if (fetching) return;
-    setFetching(true);
-    setNote("");
-    try {
-      const r = await fetch("/api/link-meta", { method: "POST", headers: await generationHeaders(), body: JSON.stringify({ link }) });
-      const d = (await r.json()) as { ok: boolean; reason?: string; title?: string; author?: string; text?: string };
-      if (!d.ok) setNote(d.reason ?? "Could not read that link.");
-      else {
-        const parts = [d.title && `Title: ${d.title}`, d.author && `By: ${d.author}`, d.text && `Post text: ${d.text}`].filter(Boolean).join("\n");
-        setPasted((cur) => (cur.trim() ? `${cur}\n${parts}` : parts));
-        setNote("Read the public details from the link. Add the caption or transcript for a deeper breakdown.");
-      }
-    } catch {
-      setNote("Could not read that link. Paste the text instead.");
-    }
-    setFetching(false);
-  };
-  const r = res?.data;
+  const r = res?.status === "analysed" ? res : null;
+  const src = r ? (r.provenance.url ?? `Uploaded file ${r.provenance.fileName ?? ""}`) : "";
   return (
     <div className="dk-list" style={{ marginTop: 8 }}>
-      <span className="dk-tag est">AI ANALYSES TEXT</span>
-      <p>YouTube and X links: the app reads the public title, channel and post text. Instagram does not allow that, so paste its caption. The AI never watches the video itself, so add the caption or transcript for a deeper breakdown.</p>
-      <div className="dk-row" style={{ flexWrap: "wrap" }}>{(["ig", "yt", "x"] as const).map((x) => <button key={x} type="button" className={"dk-chip" + (platform === x ? " on" : "")} onClick={() => setPlatform(x)}>{x === "ig" ? "Instagram" : x === "yt" ? "YouTube" : "X"}</button>)}</div>
-      <label className="dk-item"><div className="dk-label">Link (optional)</div><input className="dk-field" value={link} onChange={(e) => setLink(e.target.value)} /></label>
-      {platform !== "ig" && <button type="button" className="dk-btn secondary" disabled={fetching || !link.trim()} onClick={() => void fetchLink()}>{fetching ? <Spinner /> : null}Read details from the link</button>}
-      {note && <p role="status" style={{ fontSize: 14 }}>{note}</p>}
-      <div className="dk-row"><input className="dk-field" aria-label="Views" placeholder="Views" value={views} onChange={(e) => setViews(e.target.value)} /><input className="dk-field" aria-label="Likes" placeholder="Likes" value={likes} onChange={(e) => setLikes(e.target.value)} /></div>
-      <label className="dk-item"><div className="dk-label">Caption or transcript</div><textarea className="dk-field" rows={5} value={pasted} onChange={(e) => setPasted(e.target.value)} /></label>
-      <button type="button" className="dk-btn" disabled={busy || pasted.trim().length < 20} onClick={() => void run()}>{busy ? <Spinner /> : null}Analyse this reference</button>
+      <span className="dk-tag est">AI WATCHES THE VIDEO</span>
+      <p>Paste one public YouTube video link, or upload a clip (MP4, MOV or WebM, up to 15 MB and 3 minutes). The AI watches and listens to it. Instagram, LinkedIn and X do not let apps read their videos, so for those, upload the file. The clip is sent once for analysis and is not stored.</p>
+      <label className="dk-item"><div className="dk-label">Video link</div><input className="dk-field" value={link} disabled={!!file} placeholder="https://www.youtube.com/watch?v=..." onChange={(e) => setLink(e.target.value)} /></label>
+      <label className="dk-item"><div className="dk-label">Or upload a video file</div><input type="file" accept="video/mp4,video/quicktime,video/webm" aria-label="Upload a video file" onChange={(e) => { setFile(e.target.files?.[0] ?? null); }} />{file && <button type="button" className="dk-chip" onClick={() => setFile(null)}>Use a link instead</button>}</label>
+      <button type="button" className="dk-btn" disabled={busy || (!file && !link.trim())} onClick={() => void run()}>{busy ? <Spinner /> : null}Analyse</button>
       {err && <p className="dk-err" role="alert">{err}</p>}
+      {res?.status === "needs_upload" && <p className="dk-err" role="status">{res.reason}</p>}
       {r && (
         <div className="dk-item">
-          <div className="dk-label">What it is</div><p>{r.summary}</p>
-          <div className="dk-label">Hook pattern</div><p>{r.hookPattern}</p>
-          <div className="dk-label">Structure</div><ol>{r.structure.map((b) => <li key={b.beat}><b>{b.beat}</b>: {b.detail}</li>)}</ol>
-          <div className="dk-label">Why it works</div><ul>{r.whyItWorks.map((x) => <li key={x}>{x}</li>)}</ul>
-          <div className="dk-label">Adapt for you</div><ul>{r.adaptForMe.map((x) => <li key={x}>{x}</li>)}</ul>
-          {r.avoid.length > 0 && <><div className="dk-label">Avoid copying</div><ul>{r.avoid.map((x) => <li key={x}>{x}</li>)}</ul></>}
+          <div className="dk-label">What was read</div>
+          <p><b>{r.mode === "video+audio" ? "Video and audio" : "Video only (no speech heard)"}</b>. {r.evidence}</p>
+          <p style={{ fontSize: 14, overflowWrap: "anywhere" }}>Source: {src}{r.provenance.title ? ` · "${r.provenance.title}"` : ""}{r.provenance.creator ? ` · ${r.provenance.creator}` : ""}</p>
+          <p style={{ fontSize: 14 }}>{metricText("Views", r.metrics.views)}. {metricText("Likes", r.metrics.likes)}. {metricText("Comments", r.metrics.comments)}. Performance: unknown, no comparable videos to judge against.</p>
+          {r.warning && <p className="dk-err">{r.warning}</p>}
+          <div className="dk-label">Opening hook</div><p>{r.observed.hook}</p>
+          {r.observed.spokenPoints.length > 0 && <><div className="dk-label">Spoken points</div><ul>{r.observed.spokenPoints.map((x) => <li key={x}>{x}</li>)}</ul></>}
+          {r.observed.onScreenText.length > 0 && <><div className="dk-label">On-screen text</div><ul>{r.observed.onScreenText.map((x) => <li key={x.at + x.text}>{x.at}: {x.text}</li>)}</ul></>}
+          <div className="dk-label">Structure (approximate)</div><ol>{r.observed.structure.map((b) => <li key={b.start + b.beat}><b>{b.start} to {b.end}</b>: {b.beat}</li>)}</ol>
+          <div className="dk-label">Visual and editing patterns</div><ul>{r.observed.visualPatterns.map((x) => <li key={x}>{x}</li>)}</ul>
+          <div className="dk-label">Pacing</div><p>{r.observed.pacing}</p>
+          <div className="dk-label">Fit with your topic</div><p>{r.observed.topicFit}</p>
+          {r.observed.fitCaution && <p style={{ fontSize: 14 }}>Note: {r.observed.fitCaution}</p>}
+          <div className="dk-label">Ideas for you, using this format</div>
+          <ul>{r.observed.ideas.map((x) => (
+            <li key={x.title}><b>{x.title}</b>: {x.angle}
+              <div className="dk-row" style={{ flexWrap: "wrap", marginTop: 6 }}>
+                <button type="button" className="dk-chip" disabled={savedIdeas.some((s) => s.title === x.title)} onClick={() => setSavedIdeas([...savedIdeas, { ...x, from: src, at: new Date().toISOString() }])}>{savedIdeas.some((s) => s.title === x.title) ? "Idea saved" : "Use this idea"}</button>
+                {onScript && <button type="button" className="dk-chip" disabled={scriptBusy} onClick={() => onScript(toScriptReference(r, x))}>Write a script for this idea</button>}
+              </div>
+            </li>))}</ul>
+          <div className="dk-label">Script direction</div><p>{r.observed.scriptDirection.hookPattern}</p><ol>{r.observed.scriptDirection.beats.map((x) => <li key={x}>{x}</li>)}</ol>{r.observed.scriptDirection.notes && <p>{r.observed.scriptDirection.notes}</p>}
+          {r.observed.avoidCopying.length > 0 && <><div className="dk-label">Avoid copying</div><ul>{r.observed.avoidCopying.map((x) => <li key={x}>{x}</li>)}</ul></>}
+          {onScript && <button type="button" className="dk-btn" disabled={scriptBusy} onClick={() => onScript(toScriptReference(r))}>{scriptBusy ? <Spinner /> : null}Write a script using this pattern</button>}
+        </div>
+      )}
+      {savedIdeas.length > 0 && (
+        <div className="dk-item"><div className="dk-label">Ideas you kept from references</div>
+          <ul>{savedIdeas.map((x) => <li key={x.title}><b>{x.title}</b>: {x.angle} <span style={{ fontSize: 13, overflowWrap: "anywhere" }}>(pattern from {x.from})</span> <button type="button" className="dk-chip" onClick={() => setSavedIdeas(savedIdeas.filter((s) => s.title !== x.title))}>Remove</button></li>)}</ul>
         </div>
       )}
     </div>

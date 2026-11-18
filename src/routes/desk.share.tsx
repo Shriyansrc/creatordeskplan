@@ -31,7 +31,7 @@ function Share() {
           {Object.keys(d.scripts).length === 0 ? <p>Write a script in your plan to get a caption.</p> : (
             <>
               <select className="dk-field" value={id} onChange={(e) => setId(e.target.value)} aria-label="Choose a script" style={{ marginBottom: 12 }}>
-                {Object.keys(d.scripts).map((k) => <option key={k} value={k}>{d.plan?.data.topics.find((t) => t.id === k)?.title ?? k}</option>)}
+                {Object.keys(d.scripts).map((k) => <option key={k} value={k}>{(d.plan?.data.topics.find((t) => t.id === k.replace(/@ref$/, ""))?.title ?? k.replace(/@ref$/, "")) + (k.endsWith("@ref") ? " (from reference)" : "")}</option>)}
               </select>
               <textarea className="dk-field" rows={6} readOnly value={caption} />
               <button type="button" className="dk-btn secondary" style={{ marginTop: 10 }} onClick={() => void copy(caption, "cap")}>{copied === "cap" ? "Copied" : "Copy caption"}</button>
