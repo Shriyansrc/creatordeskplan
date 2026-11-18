@@ -141,16 +141,18 @@ function RefCard({ v, saved, onSave }: { v: Found; saved: boolean; onSave: () =>
           <span style={{ display: "grid", placeItems: "center", width: 120, height: 68, borderRadius: 8, background: "#e5eaf2", fontSize: 13, color: "#46556b", textAlign: "center" }}>No thumbnail from {NAMES[v.platform]}</span>
         )}
       </a>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <a href={v.url} target="_blank" rel="noreferrer"><b>{v.title}</b></a>
+      <div style={{ flex: "1 1 220px", minWidth: 0, overflowWrap: "anywhere" }}>
+        <a href={v.url} target="_blank" rel="noreferrer"><b style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{v.title}</b></a>
         <div style={{ fontSize: 13 }}>
           {[NAMES[v.platform], v.author || "creator unknown", v.views !== null ? `${v.views.toLocaleString()} views` : "views unknown", v.likes !== null ? `${v.likes.toLocaleString()} likes` : "likes unknown", "date unknown"].join(" · ")}
         </div>
         <div className="note">{ok ? "Confirmed video. " : "Found in search, video not verified. "}{v.why ?? v.note}</div>
         <div className="note" style={{ wordBreak: "break-all" }}>{v.url}</div>
       </div>
-      <a className="btn s" href={v.url} target="_blank" rel="noreferrer">Open video</a>
-      <button className="btn s g" onClick={onSave} aria-pressed={saved}>{saved ? "Remove from plan" : "Save to plan"}</button>
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <a className="btn s" href={v.url} target="_blank" rel="noreferrer">Open video</a>
+        <button className="btn s g" onClick={onSave} aria-pressed={saved}>{saved ? "Remove from plan" : "Save to plan"}</button>
+      </div>
     </div>
   );
 }
