@@ -7,7 +7,7 @@ function store(uid: string, opts: { missing?: boolean } = {}): ReelJobStore {
   const miss = opts.missing ? { code: "42P01", message: "relation does not exist" } : null;
   return {
     insert: async (u, id, brief, p) => { if (miss) return { error: miss }; if (u !== uid) return { error: { message: "rls" } }; const row: JobRow = { id, user_id: u, status: "submitted", brief_json: brief, source_video_path: p, result_video_path: null, error: null, created_at: "t" }; rows.push(row); return { row, error: null }; },
-    list: async () => ({ rows: miss ? undefined : mine(), error: miss }),
+    list: async () => (miss ? { error: miss } : { rows: mine(), error: null }),
     get: async (id) => ({ row: mine().find((r) => r.id === id) ?? null, error: miss }),
     cancel: async (id) => { const r = mine().find((x) => x.id === id && x.status === "submitted"); if (r) r.status = "canceled"; return { row: r ?? null, error: null }; },
     upload: async (p, f) => { if (!p.startsWith(uid + "/")) return { error: { message: "rls" } }; files.set(p, f.size); return { error: null }; },
@@ -37,7 +37,7 @@ describe("reel job api (local fixture, simulated policies)", () => {
     expect((await c.json()).status).toBe("canceled");
   });
   it("download only when ready and inside own folder", async () => {
-    const row = rows[0]; row.status = "ready"; row.result_video_path = `${B}/x/r.mp4`;
+    const row = rows[0]!; row.status = "ready"; row.result_video_path = `${B}/x/r.mp4`;
     expect((await handleReelJobs(get(), [row.id, "download"], auth(A))).status).toBe(404);
     row.result_video_path = `${A}/${row.id}/r.mp4`;
     const d = await handleReelJobs(get(), [row.id, "download"], auth(A));
